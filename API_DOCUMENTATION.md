@@ -11,10 +11,12 @@ L'API Ecologis est une solution de gestion de consommation électrique qui perme
 ## 🔐 Authentification
 
 ### Système de rôles
+
 - **`proprietaire`** : Peut gérer maisons, résidents, abonnements et voir toutes les données
 - **`resident`** : Peut voir ses propres consommations et factures
 
 ### Mécanisme JWT
+
 - **Access Token** : Valide 15 minutes, utilisé pour toutes les requêtes authentifiées
 - **Refresh Token** : Valide 7 jours, utilisé pour renouveler l'access token
 - **Format** : `Authorization: Bearer <access_token>`
@@ -26,9 +28,11 @@ L'API Ecologis est une solution de gestion de consommation électrique qui perme
 ### 1. 🔑 Authentification (`/auth`)
 
 #### POST `/auth/register`
+
 **Créer un compte propriétaire**
 
 **Body JSON:**
+
 ```json
 {
   "nom": "Doe",
@@ -40,6 +44,7 @@ L'API Ecologis est une solution de gestion de consommation électrique qui perme
 ```
 
 **Réponse succès (201):**
+
 ```json
 {
   "message": "Compte propriétaire créé avec succès",
@@ -58,9 +63,11 @@ L'API Ecologis est une solution de gestion de consommation électrique qui perme
 ```
 
 #### POST `/auth/login`
+
 **Connexion utilisateur**
 
 **Body JSON:**
+
 ```json
 {
   "email": "john.doe@example.com",
@@ -69,6 +76,7 @@ L'API Ecologis est une solution de gestion de consommation électrique qui perme
 ```
 
 **Réponse succès (200):**
+
 ```json
 {
   "message": "Connexion réussie",
@@ -91,9 +99,11 @@ L'API Ecologis est une solution de gestion de consommation électrique qui perme
 ```
 
 #### POST `/auth/refresh`
+
 **Renouveler l'access token**
 
 **Body JSON:**
+
 ```json
 {
   "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
@@ -101,14 +111,17 @@ L'API Ecologis est une solution de gestion de consommation électrique qui perme
 ```
 
 #### POST `/auth/logout`
+
 **Déconnexion** *(Authentification requise)*
 
 **Headers:** `Authorization: Bearer <access_token>`
 
 #### POST `/auth/reset-password`
+
 **Changer le mot de passe (premier login)** *(Authentification requise)*
 
 **Body JSON:**
+
 ```json
 {
   "nouveauMotDePasse": "NouveauMotDePasse123!"
@@ -116,9 +129,11 @@ L'API Ecologis est une solution de gestion de consommation électrique qui perme
 ```
 
 #### POST `/auth/change-password`
+
 **Changer le mot de passe normal** *(Authentification requise)*
 
 **Body JSON:**
+
 ```json
 {
   "motDePasseActuel": "AncienMotDePasse123!",
@@ -131,9 +146,11 @@ L'API Ecologis est une solution de gestion de consommation électrique qui perme
 ### 2. 🏠 Gestion des maisons (`/maisons`)
 
 #### POST `/maisons`
+
 **Créer une maison** *(Authentification + Propriétaire requis)*
 
 **Body JSON:**
+
 ```json
 {
   "nomMaison": "Villa Sunshine",
@@ -149,6 +166,7 @@ L'API Ecologis est une solution de gestion de consommation électrique qui perme
 ```
 
 **Réponse succès (201):**
+
 ```json
 {
   "message": "Maison créée avec succès",
@@ -169,9 +187,11 @@ L'API Ecologis est une solution de gestion de consommation électrique qui perme
 ```
 
 #### GET `/maisons`
+
 **Lister les maisons** *(Authentification requise)*
 
 **Réponse succès (200):**
+
 ```json
 {
   "maisons": [
@@ -191,18 +211,23 @@ L'API Ecologis est une solution de gestion de consommation électrique qui perme
 ```
 
 #### GET `/maisons/:id`
+
 **Obtenir une maison spécifique** *(Authentification requise)*
 
 #### PUT `/maisons/:id`
+
 **Mettre à jour une maison** *(Authentification + Propriétaire requis)*
 
 #### DELETE `/maisons/:id`
+
 **Supprimer une maison** *(Authentification + Propriétaire requis)*
 
 #### PATCH `/maisons/:id/tarif`
+
 **Mettre à jour le tarif kWh** *(Authentification + Propriétaire requis)*
 
 **Body JSON:**
+
 ```json
 {
   "tarifKwh": 0.1850
@@ -210,9 +235,11 @@ L'API Ecologis est une solution de gestion de consommation électrique qui perme
 ```
 
 #### POST `/maisons/residents/ajouter`
+
 **Ajouter un résident à une maison** *(Authentification + Propriétaire requis)*
 
 **Body JSON:**
+
 ```json
 {
   "maisonId": "64f1a2b3c4d5e6f7g8h9i0j3",
@@ -221,6 +248,7 @@ L'API Ecologis est une solution de gestion de consommation électrique qui perme
 ```
 
 #### POST `/maisons/residents/retirer`
+
 **Retirer un résident d'une maison** *(Authentification + Propriétaire requis)*
 
 ---
@@ -228,9 +256,11 @@ L'API Ecologis est une solution de gestion de consommation électrique qui perme
 ### 3. 👥 Gestion des résidents (`/residents`)
 
 #### POST `/residents`
+
 **Ajouter un résident** *(Authentification + Propriétaire + Vérification quota requis)*
 
 **Body JSON:**
+
 ```json
 {
   "nom": "Smith",
@@ -241,6 +271,7 @@ L'API Ecologis est une solution de gestion de consommation électrique qui perme
 ```
 
 **Réponse succès (201):**
+
 ```json
 {
   "message": "Résident ajouté avec succès",
@@ -258,15 +289,19 @@ L'API Ecologis est une solution de gestion de consommation électrique qui perme
 ```
 
 #### GET `/residents`
+
 **Lister les résidents** *(Authentification + Propriétaire requis)*
 
 #### GET `/residents/:id`
+
 **Obtenir un résident spécifique** *(Authentification + Propriétaire requis)*
 
 #### PUT `/residents/:id`
+
 **Mettre à jour un résident** *(Authentification + Propriétaire requis)*
 
 #### DELETE `/residents/:id`
+
 **Supprimer un résident** *(Authentification + Propriétaire requis)*
 
 ---
@@ -274,9 +309,11 @@ L'API Ecologis est une solution de gestion de consommation électrique qui perme
 ### 4. ⚡ Gestion des consommations (`/consommations`)
 
 #### POST `/consommations`
+
 **Enregistrer une consommation** *(Authentification requise)*
 
 **Body JSON:**
+
 ```json
 {
   "residentId": "64f1a2b3c4d5e6f7g8h9i0j4",
@@ -289,6 +326,7 @@ L'API Ecologis est une solution de gestion de consommation électrique qui perme
 ```
 
 **Réponse succès (201):**
+
 ```json
 {
   "message": "Consommation enregistrée avec succès",
@@ -306,13 +344,16 @@ L'API Ecologis est une solution de gestion de consommation électrique qui perme
 ```
 
 #### GET `/consommations/resident/:residentId`
+
 **Historique des consommations d'un résident** *(Authentification requise)*
 
 **Query params:**
+
 - `annee` (optionnel) : Année spécifique
 - `mois` (optionnel) : Mois spécifique
 
 **Réponse succès (200):**
+
 ```json
 {
   "consommations": [
@@ -338,12 +379,15 @@ L'API Ecologis est une solution de gestion de consommation électrique qui perme
 ```
 
 #### GET `/consommations/maison/:maisonId`
+
 **Consommations d'une maison** *(Authentification requise)*
 
 #### PUT `/consommations/:id`
+
 **Mettre à jour une consommation** *(Authentification requise)*
 
 #### DELETE `/consommations/:id`
+
 **Supprimer une consommation** *(Authentification + Propriétaire requis)*
 
 ---
@@ -351,9 +395,11 @@ L'API Ecologis est une solution de gestion de consommation électrique qui perme
 ### 5. 🧾 Gestion des factures (`/factures`)
 
 #### POST `/factures/generer/:residentId`
+
 **Générer une facture pour un résident** *(Authentification requise)*
 
 **Body JSON:**
+
 ```json
 {
   "mois": 12,
@@ -363,6 +409,7 @@ L'API Ecologis est une solution de gestion de consommation électrique qui perme
 ```
 
 **Réponse succès (201):**
+
 ```json
 {
   "message": "Facture générée avec succès",
@@ -384,19 +431,24 @@ L'API Ecologis est une solution de gestion de consommation électrique qui perme
 ```
 
 #### GET `/factures/resident/:residentId`
+
 **Factures d'un résident** *(Authentification requise)*
 
 **Query params:**
+
 - `statut` (optionnel) : payée, non payée, en retard
 - `annee` (optionnel) : Année spécifique
 
 #### GET `/factures/maison/:maisonId`
+
 **Factures d'une maison** *(Authentification requise)*
 
 #### GET `/factures/:id`
+
 **Obtenir une facture spécifique** *(Authentification requise)*
 
 #### PUT `/factures/:id/payer`
+
 **Marquer une facture comme payée** *(Authentification requise)*
 
 ---
@@ -404,9 +456,11 @@ L'API Ecologis est une solution de gestion de consommation électrique qui perme
 ### 6. 📦 Gestion des abonnements (`/abonnements`)
 
 #### GET `/abonnements`
+
 **Liste des offres disponibles** *(Public)*
 
 **Réponse succès (200):**
+
 ```json
 {
   "offres": [
@@ -433,9 +487,11 @@ L'API Ecologis est une solution de gestion de consommation électrique qui perme
 ```
 
 #### POST `/abonnements/souscrire`
+
 **Souscrire à un abonnement** *(Authentification + Propriétaire requis)*
 
 **Body JSON:**
+
 ```json
 {
   "type": "premium",
@@ -444,15 +500,19 @@ L'API Ecologis est une solution de gestion de consommation électrique qui perme
 ```
 
 #### POST `/abonnements/renouveler`
+
 **Renouveler un abonnement** *(Authentification + Propriétaire requis)*
 
 #### GET `/abonnements/actuel`
+
 **Obtenir l'abonnement actuel** *(Authentification + Propriétaire requis)*
 
 #### POST `/abonnements/annuler`
+
 **Annuler un abonnement** *(Authentification + Propriétaire requis)*
 
 #### GET `/abonnements/historique`
+
 **Historique des abonnements** *(Authentification + Propriétaire requis)*
 
 ---
@@ -460,17 +520,20 @@ L'API Ecologis est une solution de gestion de consommation électrique qui perme
 ## 💰 Logique métier
 
 ### Calcul des factures
+
 1. **Tarif personnalisé** : Chaque maison a son propre tarif kWh (défini par le propriétaire)
 2. **Tarif par défaut** : Si aucun tarif n'est défini, utilisation du tarif standard (0.1740 FCFA/kWh)
 3. **Frais fixes** : Possibilité d'ajouter des frais fixes (maintenance, etc.)
 4. **Formule** : `Montant = (kWh × Tarif kWh) + Frais fixes`
 
 ### Gestion des abonnements
+
 - **Quota résidents** : Limite le nombre de résidents selon le type d'abonnement
 - **Expiration automatique** : Notifications 7 jours avant expiration
 - **Renouvellement** : Extension automatique de la durée
 
 ### Notifications automatiques
+
 - **Consommation élevée** : Si la consommation dépasse la moyenne des 3 derniers mois
 - **Nouvelle facture** : Envoi WhatsApp automatique lors de la génération
 - **Factures en retard** : Rappels automatiques après 30 jours
@@ -481,13 +544,15 @@ L'API Ecologis est une solution de gestion de consommation électrique qui perme
 ## 🔧 Variables importantes
 
 ### Tarifs par défaut
+
 - **Prix kWh standard** : 0.1740 FCFA/kWh
 - **Frais fixes** : 0 FCFA (configurable par propriétaire)
 - **Échéance facture** : 30 jours après émission
 
 ### Limites d'abonnement
+
 - **Basic** : 3 résidents max
-- **Premium** : 10 résidents max  
+- **Premium** : 10 résidents max
 - **Enterprise** : 50 résidents max
 
 ---
@@ -495,6 +560,7 @@ L'API Ecologis est une solution de gestion de consommation électrique qui perme
 ## 📱 Exemples de requêtes Postman
 
 ### 1. Créer un compte propriétaire
+
 ```
 POST http://localhost:3000/auth/register
 Content-Type: application/json
@@ -509,6 +575,7 @@ Content-Type: application/json
 ```
 
 ### 2. Se connecter
+
 ```
 POST http://localhost:3000/auth/login
 Content-Type: application/json
@@ -520,6 +587,7 @@ Content-Type: application/json
 ```
 
 ### 3. Créer une maison (avec token)
+
 ```
 POST http://localhost:3000/maisons
 Authorization: Bearer <access_token>
@@ -537,6 +605,7 @@ Content-Type: application/json
 ```
 
 ### 4. Ajouter un résident
+
 ```
 POST http://localhost:3000/residents
 Authorization: Bearer <access_token>
@@ -551,6 +620,7 @@ Content-Type: application/json
 ```
 
 ### 5. Enregistrer une consommation
+
 ```
 POST http://localhost:3000/consommations
 Authorization: Bearer <access_token>
@@ -566,6 +636,7 @@ Content-Type: application/json
 ```
 
 ### 6. Générer une facture
+
 ```
 POST http://localhost:3000/factures/generer/64f1a2b3c4d5e6f7g8h9i0j4
 Authorization: Bearer <access_token>
@@ -583,6 +654,7 @@ Content-Type: application/json
 ## 🚀 Guide d'utilisation pour Flutter
 
 ### 1. **Authentification**
+
 ```dart
 // Stocker les tokens de manière sécurisée
 class AuthService {
@@ -604,6 +676,7 @@ class AuthService {
 ```
 
 ### 2. **Gestion des requêtes**
+
 ```dart
 class ApiService {
   static const String baseUrl = 'http://localhost:3000';
@@ -627,6 +700,7 @@ class ApiService {
 ```
 
 ### 3. **Gestion des erreurs**
+
 ```dart
 class ApiException implements Exception {
   final String message;
@@ -642,12 +716,13 @@ class ApiException implements Exception {
 ```
 
 ### 4. **Exemple d'utilisation**
+
 ```dart
 class ConsommationService {
   static Future<List<Consommation>> getConsommationsResident(String residentId) async {
     try {
       final response = await ApiService.get('/consommations/resident/$residentId');
-      
+    
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         return (data['consommations'] as List)
@@ -678,6 +753,7 @@ class ConsommationService {
 6. **Calculs automatiques** : Les montants des factures sont calculés automatiquement par l'API
 
 ### **Workflow recommandé :**
+
 1. Authentification → Récupération des tokens
 2. Vérification du rôle utilisateur
 3. Chargement des données selon les permissions
@@ -685,6 +761,7 @@ class ConsommationService {
 5. Mise à jour en temps réel via WebSocket (optionnel)
 
 ### **Sécurité :**
+
 - Stocker les tokens de manière sécurisée (SecureStorage)
 - Ne jamais exposer les tokens dans les logs
 - Vérifier les permissions côté client ET côté serveur
@@ -696,5 +773,5 @@ class ConsommationService {
 
 Pour toute question technique ou problème d'intégration, contactez l'équipe de développement backend.
 
-**Version API :** 1.0.0  
+**Version API :** 1.0.0
 **Dernière mise à jour :** Décembre 2025
