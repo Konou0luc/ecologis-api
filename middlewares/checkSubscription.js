@@ -26,11 +26,11 @@ const checkSubscription = async (req, res, next) => {
       });
     }
 
-    // Vérifier si l'abonnement est actif
-    if (!abonnement.isActif()) {
+    // Vérifier si l'abonnement est actif (paiement validé) et non expiré
+    if (!abonnement.isActive || !abonnement.isActif()) {
       return res.status(403).json({ 
         message: 'Abonnement expiré',
-        error: 'SUBSCRIPTION_EXPIRED',
+        error: !abonnement.isActive ? 'NO_SUBSCRIPTION' : 'SUBSCRIPTION_EXPIRED',
         dateExpiration: abonnement.dateFin,
         joursRestants: abonnement.joursRestants()
       });

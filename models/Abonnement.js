@@ -30,6 +30,10 @@ const abonnementSchema = new mongoose.Schema({
     enum: ['actif', 'expiré', 'suspendu'],
     default: 'actif'
   },
+  isActive: {
+    type: Boolean,
+    default: false
+  },
   proprietaireId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',

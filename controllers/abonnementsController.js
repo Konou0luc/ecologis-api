@@ -106,6 +106,7 @@ const souscrire = async (req, res) => {
       dateDebut,
       dateFin,
       statut: 'actif',
+      isActive: false,
       proprietaireId: req.user._id
     });
 
@@ -229,6 +230,55 @@ const annuler = async (req, res) => {
   }
 };
 
+// Activer un abonnement (admin seulement)
+/**
+ * PATCH /abonnements/:id/activer
+ * Rôle: admin
+ * Effet: met isActive=true sur l'abonnement ciblé
+ */
+const activer = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const abonnement = await Abonnement.findById(id);
+    if (!abonnement) {
+      return res.status(404).json({ message: 'Abonnement non trouvé' });
+    }
+
+    abonnement.isActive = true;
+    await abonnement.save();
+
+    res.json({ message: 'Abonnement activé', abonnement });
+  } catch (error) {
+    console.error('Erreur lors de l\'activation:', error);
+    res.status(500).json({ message: 'Erreur lors de l\'activation' });
+  }
+};
+
+/**
+ * PATCH /abonnements/:id/desactiver
+ * Rôle: admin
+ * Effet: met isActive=false sur l'abonnement ciblé
+ */
+const desactiver = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const abonnement = await Abonnement.findById(id);
+    if (!abonnement) {
+      return res.status(404).json({ message: 'Abonnement non trouvé' });
+    }
+
+    abonnement.isActive = false;
+    await abonnement.save();
+
+    res.json({ message: 'Abonnement désactivé', abonnement });
+  } catch (error) {
+    console.error('Erreur lors de la désactivation:', error);
+    res.status(500).json({ message: 'Erreur lors de la désactivation' });
+  }
+};
+
 // Obtenir l'historique des abonnements
 const getHistorique = async (req, res) => {
   try {
@@ -256,5 +306,7 @@ module.exports = {
   renouveler,
   getAbonnementActuel,
   annuler,
-  getHistorique
+  getHistorique,
+  activer,
+  desactiver
 };

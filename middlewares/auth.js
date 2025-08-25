@@ -49,6 +49,14 @@ const requireResident = (req, res, next) => {
   next();
 };
 
+// Middleware pour vérifier le rôle admin
+const requireAdmin = (req, res, next) => {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Accès réservé aux administrateurs' });
+  }
+  next();
+};
+
 // Middleware pour vérifier si c'est le premier login
 const requirePasswordChange = (req, res, next) => {
   if (req.user.firstLogin) {

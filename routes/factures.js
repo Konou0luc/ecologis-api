@@ -2,9 +2,11 @@ const express = require('express');
 const router = express.Router();
 const facturesController = require('../controllers/facturesController');
 const { authenticateToken } = require('../middlewares/auth');
+const { checkSubscription } = require('../middlewares/checkSubscription');
 
 // Toutes les routes nécessitent une authentification
 router.use(authenticateToken);
+router.use(checkSubscription);
 
 // POST /factures/generer/:residentId - Générer une facture pour un résident
 router.post('/generer/:residentId', facturesController.generateFacture);

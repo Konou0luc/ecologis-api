@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');
-const { authenticateToken, requirePasswordChange } = require('../middlewares/auth');
+const { authenticateToken, requirePasswordChange, requireAdmin } = require('../middlewares/auth');
+const usersController = require('../controllers/usersController');
 
 // POST /auth/register - Créer un compte propriétaire
 router.post('/register', authController.register);
@@ -20,5 +21,13 @@ router.post('/reset-password', authenticateToken, requirePasswordChange, authCon
 
 // POST /auth/change-password - Changement de mot de passe normal
 router.post('/change-password', authenticateToken, authController.changePassword);
+
+/**
+ * Route admin à ajouter dans un futur UsersController:
+ * PATCH /users/:id/make-admin
+ * Protégée par requireAdmin
+ * Permet de promouvoir un utilisateur au rôle admin
+ */
+router.patch('/users/:id/make-admin', authenticateToken, requireAdmin, usersController.makeAdmin);
 
 module.exports = router;

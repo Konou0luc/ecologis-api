@@ -30,7 +30,7 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['proprietaire', 'resident'],
+    enum: ['proprietaire', 'resident', 'admin'],
     required: true
   },
   idProprietaire: {

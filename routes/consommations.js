@@ -2,9 +2,11 @@ const express = require('express');
 const router = express.Router();
 const consommationsController = require('../controllers/consommationsController');
 const { authenticateToken } = require('../middlewares/auth');
+const { checkSubscription } = require('../middlewares/checkSubscription');
 
 // Toutes les routes nécessitent une authentification
 router.use(authenticateToken);
+router.use(checkSubscription);
 
 // POST /consommations - Enregistrer une consommation
 router.post('/', consommationsController.addConsommation);
