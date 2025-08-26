@@ -96,6 +96,7 @@ module.exports = {
   authenticateToken,
   requireProprietaire,
   requireResident,
+  requireAdmin,
   requirePasswordChange,
   authenticateRefreshToken
 };
