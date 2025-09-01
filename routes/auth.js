@@ -22,6 +22,9 @@ router.post('/reset-password', authenticateToken, requirePasswordChange, authCon
 // POST /auth/change-password - Changement de mot de passe normal
 router.post('/change-password', authenticateToken, authController.changePassword);
 
+// GET /auth/me - Récupérer les informations de l'utilisateur connecté
+router.get('/me', authenticateToken, authController.getCurrentUser);
+
 /**
  * Route admin à ajouter dans un futur UsersController:
  * PATCH /users/:id/make-admin

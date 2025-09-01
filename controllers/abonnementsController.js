@@ -79,6 +79,13 @@ const souscrire = async (req, res) => {
           abonnement: existingAbonnement
         });
       }
+      // Si l'abonnement existe mais n'est pas actif, on peut le remplacer
+      if (existingAbonnement && !existingAbonnement.isActif()) {
+        // Supprimer l'ancien abonnement
+        await Abonnement.findByIdAndDelete(existingAbonnement._id);
+        req.user.abonnementId = null;
+        await req.user.save();
+      }
     }
 
     // Définir les détails de l'abonnement selon le type

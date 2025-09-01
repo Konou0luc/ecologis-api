@@ -198,11 +198,58 @@ const changePassword = async (req, res) => {
   }
 };
 
+// Récupérer les informations de l'utilisateur connecté
+const getCurrentUser = async (req, res) => {
+  try {
+    console.log('🔍 [API] Récupération des données utilisateur:', req.user._id);
+    
+    // Récupérer l'utilisateur avec ses données complètes
+    const user = await User.findById(req.user._id).select('-motDePasse -refreshToken');
+    
+    if (!user) {
+      return res.status(404).json({ message: 'Utilisateur non trouvé' });
+    }
+
+    // Récupérer l'abonnement si c'est un propriétaire
+    let abonnement = null;
+    if (user.role === 'proprietaire' && user.abonnementId) {
+      abonnement = await Abonnement.findById(user.abonnementId);
+    }
+
+    // Récupérer les maisons si c'est un propriétaire
+    let maisons = [];
+    if (user.role === 'proprietaire') {
+      const Maison = require('../models/Maison');
+      maisons = await Maison.find({ proprietaireId: user._id });
+    }
+
+    // Récupérer les résidents si c'est un propriétaire
+    let residents = [];
+    if (user.role === 'proprietaire') {
+      residents = await User.find({ idProprietaire: user._id, role: 'resident' }).select('-motDePasse -refreshToken');
+    }
+
+    console.log('✅ [API] Données utilisateur récupérées avec succès');
+    
+    res.json({
+      user,
+      abonnement,
+      maisons,
+      residents,
+      message: 'Données utilisateur récupérées avec succès'
+    });
+  } catch (error) {
+    console.error('💥 [API] Erreur lors de la récupération des données utilisateur:', error);
+    res.status(500).json({ message: 'Erreur lors de la récupération des données utilisateur' });
+  }
+};
+
 module.exports = {
   register,
   login,
   refreshToken,
   logout,
   resetPassword,
-  changePassword
+  changePassword,
+  getCurrentUser
 };
