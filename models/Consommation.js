@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+import Maison from "./Maison.js";
 
 const consommationSchema = new mongoose.Schema({
   residentId: {
@@ -11,7 +12,22 @@ const consommationSchema = new mongoose.Schema({
     ref: 'Maison',
     required: true
   },
+  previousIndex: {
+    type: Number,
+    required: true,
+    min: 0
+  },
+  currentIndex: {
+    type: Number,
+    required: true,
+    min: 0
+  },
   kwh: {
+    type: Number,
+    required: true,
+    min: 0
+  },
+  montant: {
     type: Number,
     required: true,
     min: 0
@@ -44,10 +60,22 @@ const consommationSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Méthode pour calculer le montant (prix par kWh)
-consommationSchema.methods.calculerMontant = function(prixKwh = 0.1740) {
-  return this.kwh * prixKwh;
-};
+consommationSchema.pre("save", async function (next) {
+  this.kwh = this.currentIndex - this.previousIndex;
+
+  if(this.kwh < 0){
+    return next(new Error("L'index actuel dois être supérieur ou égale à l'ancien index"))
+  }
+
+  const maison = await Maison.findById(this.maisonId);
+  if(!maison){
+    return next(new Error("Aucun maison trouvé avec cet id"))
+  }
+
+  this.montant = this.kwh * maison.tarifKwh;
+  next();
+})
+
 
 // Méthode pour obtenir la période (mois/année)
 consommationSchema.virtual('periode').get(function() {

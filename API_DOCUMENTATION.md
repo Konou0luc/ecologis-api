@@ -4,7 +4,7 @@
 
 L'API Ecologis est une solution de gestion de consommation électrique qui permet aux propriétaires de gérer leurs maisons, résidents et factures d'électricité. Elle gère automatiquement le calcul des factures basé sur les relevés de consommation et les tarifs personnalisés.
 
-**🌐 Base URL:** `https://ecologis-api.onrender.com`
+**🌐 Base URL:** `https://ecologis-api.vercel.app`
 
 **📱 Statut:** Production - Déployé sur Render
 
@@ -34,7 +34,7 @@ L'API Ecologis est une solution de gestion de consommation électrique qui perme
 #### POST `/auth/register`
 **Créer un compte propriétaire**
 
-**URL complète:** `https://ecologis-api.onrender.com/auth/register`
+**URL complète:** `https://ecologis-api.vercel.app/auth/register`
 
 **Body JSON:**
 ```json
@@ -49,7 +49,7 @@ L'API Ecologis est une solution de gestion de consommation électrique qui perme
 
 **Exemple cURL:**
 ```bash
-curl -X POST https://ecologis-api.onrender.com/auth/register \
+curl -X POST https://ecologis-api.vercel.app/auth/register \
   -H "Content-Type: application/json" \
   -d '{
     "nom": "Doe",
@@ -88,7 +88,7 @@ curl -X POST https://ecologis-api.onrender.com/auth/register \
 #### POST `/auth/login`
 **Connexion utilisateur**
 
-**URL complète:** `https://ecologis-api.onrender.com/auth/login`
+**URL complète:** `https://ecologis-api.vercel.app/auth/login`
 
 **Body JSON:**
 ```json
@@ -100,7 +100,7 @@ curl -X POST https://ecologis-api.onrender.com/auth/register \
 
 **Exemple cURL:**
 ```bash
-curl -X POST https://ecologis-api.onrender.com/auth/login \
+curl -X POST https://ecologis-api.vercel.app/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "john.doe@example.com",
@@ -140,7 +140,7 @@ curl -X POST https://ecologis-api.onrender.com/auth/login \
 #### POST `/auth/refresh`
 **Renouveler l'access token**
 
-**URL complète:** `https://ecologis-api.onrender.com/auth/refresh`
+**URL complète:** `https://ecologis-api.vercel.app/auth/refresh`
 
 **Body JSON:**
 ```json
@@ -151,7 +151,7 @@ curl -X POST https://ecologis-api.onrender.com/auth/login \
 
 **Exemple cURL:**
 ```bash
-curl -X POST https://ecologis-api.onrender.com/auth/refresh \
+curl -X POST https://ecologis-api.vercel.app/auth/refresh \
   -H "Content-Type: application/json" \
   -d '{
     "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
@@ -161,20 +161,20 @@ curl -X POST https://ecologis-api.onrender.com/auth/refresh \
 #### POST `/auth/logout`
 **Déconnexion** *(Authentification requise)*
 
-**URL complète:** `https://ecologis-api.onrender.com/auth/logout`
+**URL complète:** `https://ecologis-api.vercel.app/auth/logout`
 
 **Headers:** `Authorization: Bearer <access_token>`
 
 **Exemple cURL:**
 ```bash
-curl -X POST https://ecologis-api.onrender.com/auth/logout \
+curl -X POST https://ecologis-api.vercel.app/auth/logout \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 ```
 
 #### POST `/auth/reset-password`
 **Changer le mot de passe (premier login)** *(Authentification requise)*
 
-**URL complète:** `https://ecologis-api.onrender.com/auth/reset-password`
+**URL complète:** `https://ecologis-api.vercel.app/auth/reset-password`
 
 **Body JSON:**
 ```json
@@ -186,7 +186,7 @@ curl -X POST https://ecologis-api.onrender.com/auth/logout \
 #### POST `/auth/change-password`
 **Changer le mot de passe normal** *(Authentification requise)*
 
-**URL complète:** `https://ecologis-api.onrender.com/auth/change-password`
+**URL complète:** `https://ecologis-api.vercel.app/auth/change-password`
 
 **Body JSON:**
 ```json
@@ -203,7 +203,7 @@ curl -X POST https://ecologis-api.onrender.com/auth/logout \
 #### POST `/maisons`
 **Créer une maison** *(Authentification + Propriétaire requis)*
 
-**URL complète:** `https://ecologis-api.onrender.com/maisons`
+**URL complète:** `https://ecologis-api.vercel.app/maisons`
 
 **Body JSON:**
 ```json
@@ -222,7 +222,7 @@ curl -X POST https://ecologis-api.onrender.com/auth/logout \
 
 **Exemple cURL:**
 ```bash
-curl -X POST https://ecologis-api.onrender.com/maisons \
+curl -X POST https://ecologis-api.vercel.app/maisons \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -259,11 +259,11 @@ curl -X POST https://ecologis-api.onrender.com/maisons \
 #### GET `/maisons`
 **Lister les maisons** *(Authentification requise)*
 
-**URL complète:** `https://ecologis-api.onrender.com/maisons`
+**URL complète:** `https://ecologis-api.vercel.app/maisons`
 
 **Exemple cURL:**
 ```bash
-curl -X GET https://ecologis-api.onrender.com/maisons \
+curl -X GET https://ecologis-api.vercel.app/maisons \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 ```
 
@@ -298,22 +298,22 @@ curl -X GET https://ecologis-api.onrender.com/maisons \
 #### GET `/maisons/:id`
 **Obtenir une maison spécifique** *(Authentification requise)*
 
-**URL complète:** `https://ecologis-api.onrender.com/maisons/64f1a2b3c4d5e6f7g8h9i0j3`
+**URL complète:** `https://ecologis-api.vercel.app/maisons/64f1a2b3c4d5e6f7g8h9i0j3`
 
 #### PUT `/maisons/:id`
 **Mettre à jour une maison** *(Authentification + Propriétaire requis)*
 
-**URL complète:** `https://ecologis-api.onrender.com/maisons/64f1a2b3c4d5e6f7g8h9i0j3`
+**URL complète:** `https://ecologis-api.vercel.app/maisons/64f1a2b3c4d5e6f7g8h9i0j3`
 
 #### DELETE `/maisons/:id`
 **Supprimer une maison** *(Authentification + Propriétaire requis)*
 
-**URL complète:** `https://ecologis-api.onrender.com/maisons/64f1a2b3c4d5e6f7g8h9i0j3`
+**URL complète:** `https://ecologis-api.vercel.app/maisons/64f1a2b3c4d5e6f7g8h9i0j3`
 
 #### PATCH `/maisons/:id/tarif`
 **Mettre à jour le tarif kWh** *(Authentification + Propriétaire requis)*
 
-**URL complète:** `https://ecologis-api.onrender.com/maisons/64f1a2b3c4d5e6f7g8h9i0j3/tarif`
+**URL complète:** `https://ecologis-api.vercel.app/maisons/64f1a2b3c4d5e6f7g8h9i0j3/tarif`
 
 **Body JSON:**
 ```json
@@ -325,7 +325,7 @@ curl -X GET https://ecologis-api.onrender.com/maisons \
 #### POST `/maisons/residents/ajouter`
 **Ajouter un résident à une maison** *(Authentification + Propriétaire requis)*
 
-**URL complète:** `https://ecologis-api.onrender.com/maisons/residents/ajouter`
+**URL complète:** `https://ecologis-api.vercel.app/maisons/residents/ajouter`
 
 **Body JSON:**
 ```json
@@ -338,7 +338,7 @@ curl -X GET https://ecologis-api.onrender.com/maisons \
 #### POST `/maisons/residents/retirer`
 **Retirer un résident d'une maison** *(Authentification + Propriétaire requis)*
 
-**URL complète:** `https://ecologis-api.onrender.com/maisons/residents/retirer`
+**URL complète:** `https://ecologis-api.vercel.app/maisons/residents/retirer`
 
 ---
 
@@ -347,7 +347,7 @@ curl -X GET https://ecologis-api.onrender.com/maisons \
 #### POST `/residents`
 **Ajouter un résident** *(Authentification + Propriétaire + Vérification quota requis)*
 
-**URL complète:** `https://ecologis-api.onrender.com/residents`
+**URL complète:** `https://ecologis-api.vercel.app/residents`
 
 **Body JSON:**
 ```json
@@ -362,7 +362,7 @@ curl -X GET https://ecologis-api.onrender.com/maisons \
 
 **Exemple cURL:**
 ```bash
-curl -X POST https://ecologis-api.onrender.com/residents \
+curl -X POST https://ecologis-api.vercel.app/residents \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -394,22 +394,22 @@ curl -X POST https://ecologis-api.onrender.com/residents \
 #### GET `/residents`
 **Lister les résidents** *(Authentification + Propriétaire requis)*
 
-**URL complète:** `https://ecologis-api.onrender.com/residents`
+**URL complète:** `https://ecologis-api.vercel.app/residents`
 
 #### GET `/residents/:id`
 **Obtenir un résident spécifique** *(Authentification + Propriétaire requis)*
 
-**URL complète:** `https://ecologis-api.onrender.com/residents/64f1a2b3c4d5e6f7g8h9i0j4`
+**URL complète:** `https://ecologis-api.vercel.app/residents/64f1a2b3c4d5e6f7g8h9i0j4`
 
 #### PUT `/residents/:id`
 **Mettre à jour un résident** *(Authentification + Propriétaire requis)*
 
-**URL complète:** `https://ecologis-api.onrender.com/residents/64f1a2b3c4d5e6f7g8h9i0j4`
+**URL complète:** `https://ecologis-api.vercel.app/residents/64f1a2b3c4d5e6f7g8h9i0j4`
 
 #### DELETE `/residents/:id`
 **Supprimer un résident** *(Authentification + Propriétaire requis)*
 
-**URL complète:** `https://ecologis-api.onrender.com/residents/64f1a2b3c4d5e6f7g8h9i0j4`
+**URL complète:** `https://ecologis-api.vercel.app/residents/64f1a2b3c4d5e6f7g8h9i0j4`
 
 ---
 
@@ -418,7 +418,7 @@ curl -X POST https://ecologis-api.onrender.com/residents \
 #### POST `/consommations`
 **Enregistrer une consommation** *(Authentification requise)*
 
-**URL complète:** `https://ecologis-api.onrender.com/consommations`
+**URL complète:** `https://ecologis-api.vercel.app/consommations`
 
 **Body JSON:**
 ```json
@@ -434,7 +434,7 @@ curl -X POST https://ecologis-api.onrender.com/residents \
 
 **Exemple cURL:**
 ```bash
-curl -X POST https://ecologis-api.onrender.com/consommations \
+curl -X POST https://ecologis-api.vercel.app/consommations \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -466,7 +466,7 @@ curl -X POST https://ecologis-api.onrender.com/consommations \
 #### GET `/consommations/resident/:residentId`
 **Historique des consommations d'un résident** *(Authentification requise)*
 
-**URL complète:** `https://ecologis-api.onrender.com/consommations/resident/64f1a2b3c4d5e6f7g8h9i0j4`
+**URL complète:** `https://ecologis-api.vercel.app/consommations/resident/64f1a2b3c4d5e6f7g8h9i0j4`
 
 **Query params:**
 - `annee` (optionnel) : Année spécifique
@@ -474,24 +474,24 @@ curl -X POST https://ecologis-api.onrender.com/consommations \
 
 **Exemple cURL:**
 ```bash
-curl -X GET "https://ecologis-api.onrender.com/consommations/resident/64f1a2b3c4d5e6f7g8h9i0j4?annee=2025&mois=12" \
+curl -X GET "https://ecologis-api.vercel.app/consommations/resident/64f1a2b3c4d5e6f7g8h9i0j4?annee=2025&mois=12" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 ```
 
 #### GET `/consommations/maison/:maisonId`
 **Consommations d'une maison** *(Authentification requise)*
 
-**URL complète:** `https://ecologis-api.onrender.com/consommations/maison/64f1a2b3c4d5e6f7g8h9i0j3`
+**URL complète:** `https://ecologis-api.vercel.app/consommations/maison/64f1a2b3c4d5e6f7g8h9i0j3`
 
 #### PUT `/consommations/:id`
 **Mettre à jour une consommation** *(Authentification requise)*
 
-**URL complète:** `https://ecologis-api.onrender.com/consommations/64f1a2b3c4d5e6f7g8h9i0j5`
+**URL complète:** `https://ecologis-api.vercel.app/consommations/64f1a2b3c4d5e6f7g8h9i0j5`
 
 #### DELETE `/consommations/:id`
 **Supprimer une consommation** *(Authentification + Propriétaire requis)*
 
-**URL complète:** `https://ecologis-api.onrender.com/consommations/64f1a2b3c4d5e6f7g8h9i0j5`
+**URL complète:** `https://ecologis-api.vercel.app/consommations/64f1a2b3c4d5e6f7g8h9i0j5`
 
 ---
 
@@ -500,7 +500,7 @@ curl -X GET "https://ecologis-api.onrender.com/consommations/resident/64f1a2b3c4
 #### POST `/factures/generer/:residentId`
 **Générer une facture pour un résident** *(Authentification requise)*
 
-**URL complète:** `https://ecologis-api.onrender.com/factures/generer/64f1a2b3c4d5e6f7g8h9i0j4`
+**URL complète:** `https://ecologis-api.vercel.app/factures/generer/64f1a2b3c4d5e6f7g8h9i0j4`
 
 **Body JSON:**
 ```json
@@ -513,7 +513,7 @@ curl -X GET "https://ecologis-api.onrender.com/consommations/resident/64f1a2b3c4
 
 **Exemple cURL:**
 ```bash
-curl -X POST https://ecologis-api.onrender.com/factures/generer/64f1a2b3c4d5e6f7g8h9i0j4 \
+curl -X POST https://ecologis-api.vercel.app/factures/generer/64f1a2b3c4d5e6f7g8h9i0j4 \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -547,7 +547,7 @@ curl -X POST https://ecologis-api.onrender.com/factures/generer/64f1a2b3c4d5e6f7
 #### GET `/factures/resident/:residentId`
 **Factures d'un résident** *(Authentification requise)*
 
-**URL complète:** `https://ecologis-api.onrender.com/factures/resident/64f1a2b3c4d5e6f7g8h9i0j4`
+**URL complète:** `https://ecologis-api.vercel.app/factures/resident/64f1a2b3c4d5e6f7g8h9i0j4`
 
 **Query params:**
 - `statut` (optionnel) : payée, non payée, en retard
@@ -556,17 +556,17 @@ curl -X POST https://ecologis-api.onrender.com/factures/generer/64f1a2b3c4d5e6f7
 #### GET `/factures/maison/:maisonId`
 **Factures d'une maison** *(Authentification requise)*
 
-**URL complète:** `https://ecologis-api.onrender.com/factures/maison/64f1a2b3c4d5e6f7g8h9i0j3`
+**URL complète:** `https://ecologis-api.vercel.app/factures/maison/64f1a2b3c4d5e6f7g8h9i0j3`
 
 #### GET `/factures/:id`
 **Obtenir une facture spécifique** *(Authentification requise)*
 
-**URL complète:** `https://ecologis-api.onrender.com/factures/64f1a2b3c4d5e6f7g8h9i0j6`
+**URL complète:** `https://ecologis-api.vercel.app/factures/64f1a2b3c4d5e6f7g8h9i0j6`
 
 #### PUT `/factures/:id/payer`
 **Marquer une facture comme payée** *(Authentification requise)*
 
-**URL complète:** `https://ecologis-api.onrender.com/factures/64f1a2b3c4d5e6f7g8h9i0j6/payer`
+**URL complète:** `https://ecologis-api.vercel.app/factures/64f1a2b3c4d5e6f7g8h9i0j6/payer`
 
 ---
 
@@ -575,11 +575,11 @@ curl -X POST https://ecologis-api.onrender.com/factures/generer/64f1a2b3c4d5e6f7
 #### GET `/abonnements`
 **Liste des offres disponibles** *(Public)*
 
-**URL complète:** `https://ecologis-api.onrender.com/abonnements`
+**URL complète:** `https://ecologis-api.vercel.app/abonnements`
 
 **Exemple cURL:**
 ```bash
-curl -X GET https://ecologis-api.onrender.com/abonnements
+curl -X GET https://ecologis-api.vercel.app/abonnements
 ```
 
 **Réponse succès (200):**
@@ -638,7 +638,7 @@ curl -X GET https://ecologis-api.onrender.com/abonnements
 #### POST `/abonnements/souscrire`
 **Souscrire à un abonnement** *(Authentification + Propriétaire requis)*
 
-**URL complète:** `https://ecologis-api.onrender.com/abonnements/souscrire`
+**URL complète:** `https://ecologis-api.vercel.app/abonnements/souscrire`
 
 **Body JSON:**
 ```json
@@ -650,22 +650,22 @@ curl -X GET https://ecologis-api.onrender.com/abonnements
 #### POST `/abonnements/renouveler`
 **Renouveler un abonnement** *(Authentification + Propriétaire requis)*
 
-**URL complète:** `https://ecologis-api.onrender.com/abonnements/renouveler`
+**URL complète:** `https://ecologis-api.vercel.app/abonnements/renouveler`
 
 #### GET `/abonnements/actuel`
 **Obtenir l'abonnement actuel** *(Authentification + Propriétaire requis)*
 
-**URL complète:** `https://ecologis-api.onrender.com/abonnements/actuel`
+**URL complète:** `https://ecologis-api.vercel.app/abonnements/actuel`
 
 #### POST `/abonnements/annuler`
 **Annuler un abonnement** *(Authentification + Propriétaire requis)*
 
-**URL complète:** `https://ecologis-api.onrender.com/abonnements/annuler`
+**URL complète:** `https://ecologis-api.vercel.app/abonnements/annuler`
 
 #### GET `/abonnements/historique`
 **Historique des abonnements** *(Authentification + Propriétaire requis)*
 
-**URL complète:** `https://ecologis-api.onrender.com/abonnements/historique`
+**URL complète:** `https://ecologis-api.vercel.app/abonnements/historique`
 
 ---
 
@@ -710,7 +710,7 @@ curl -X GET https://ecologis-api.onrender.com/abonnements
 
 Créez un environnement avec ces variables :
 ```
-BASE_URL: https://ecologis-api.onrender.com
+BASE_URL: https://ecologis-api.vercel.app
 ACCESS_TOKEN: (vide au début)
 REFRESH_TOKEN: (vide au début)
 USER_ID: (vide au début)
@@ -791,7 +791,7 @@ pm.request.headers.add({
 
 ```dart
 class ApiConfig {
-  static const String baseUrl = 'https://ecologis-api.onrender.com';
+  static const String baseUrl = 'https://ecologis-api.vercel.app';
   static const Duration timeout = Duration(seconds: 30);
   
   // Headers par défaut
@@ -939,7 +939,7 @@ try {
 
 ## 📞 Support et contact
 
-**🌐 URL de production :** https://ecologis-api.onrender.com
+**🌐 URL de production :** https://ecologis-api.vercel.app
 
 **📧 Support technique :** Contactez l'équipe de développement backend
 
