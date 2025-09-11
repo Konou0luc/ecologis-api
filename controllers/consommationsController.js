@@ -2,7 +2,6 @@ const Consommation = require("../models/Consommation");
 const User = require("../models/User");
 const Maison = require("../models/Maison");
 const notifications = require("../utils/notifications");
-
 // Enregistrer une consommation
 const addConsommation = async (req, res) => {
   try {
@@ -37,11 +36,9 @@ const addConsommation = async (req, res) => {
     } else {
       // Le résident enregistre pour lui-même
       if (residentId !== req.user._id.toString()) {
-        return res
-          .status(403)
-          .json({
-            message: "Vous ne pouvez enregistrer que votre propre consommation",
-          });
+        return res.status(403).json({
+          message: "Vous ne pouvez enregistrer que votre propre consommation",
+        });
       }
       const maison = await Maison.findOne({
         _id: maisonId,
@@ -65,7 +62,22 @@ const addConsommation = async (req, res) => {
       });
     }
 
-    // Créer la consommation (kwh et montant seront calculés automatiquement par le modèle)
+    // Calcul du kWh
+    const kwh = currentIndex - previousIndex;
+    if (kwh < 0) {
+      return res
+        .status(400)
+        .json({ message: "L'index actuel doit être ≥ à l'ancien index" });
+    }
+
+    // Récupérer la maison pour calcul du montant
+    const maison = await Maison.findById(maisonId);
+    if (!maison) {
+      return res.status(404).json({ message: "Maison non trouvée" });
+    }
+    const montant = kwh * maison.tarifKwh;
+
+    // Créer la consommation
     const consommation = new Consommation({
       residentId,
       maisonId,
@@ -74,6 +86,8 @@ const addConsommation = async (req, res) => {
       mois,
       annee,
       commentaire,
+      kwh,
+      montant,
     });
 
     await consommation.save();
