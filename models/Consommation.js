@@ -1,5 +1,5 @@
-import mongoose from "mongoose";
-import Maison from "./Maison.js";
+const mongoose = require('mongoose');
+const Maison = require('./Maison.js')
 
 const consommationSchema = new mongoose.Schema({
   residentId: {
@@ -101,7 +101,4 @@ consommationSchema.index({
 consommationSchema.index({ residentId: 1, annee: 1, mois: 1 });
 consommationSchema.index({ maisonId: 1, annee: 1, mois: 1 });
 
-const Consommation = mongoose.model("Consommation", consommationSchema);
-
-export default Consommation;
-
+module.exports = mongoose.model('Consommation', consommationSchema);
