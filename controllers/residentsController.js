@@ -38,7 +38,6 @@ const addResident = async (req, res) => {
       role: 'resident',
       idProprietaire: req.user._id,
       maisonId: maisonId,
-      maisonId: mongoose.Types.ObjectId(maisonId), // 🔥 on stocke l'ObjectId
       firstLogin: true
     });
 
