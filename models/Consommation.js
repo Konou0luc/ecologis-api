@@ -61,21 +61,25 @@ const consommationSchema = new mongoose.Schema({
 });
 
 consommationSchema.pre("save", async function (next) {
+  console.log("📥 Pre-save consommation:", this);
+
   this.kwh = this.currentIndex - this.previousIndex;
 
-  if(this.kwh < 0){
-    return next(new Error("L'index actuel dois être supérieur ou égale à l'ancien index"))
+  if (this.kwh < 0) {
+    return next(new Error("L'index actuel doit être ≥ à l'ancien index"));
   }
 
   const maison = await Maison.findById(this.maisonId);
-  if(!maison){
-    return next(new Error("Aucun maison trouvé avec cet id"))
+  if (!maison) {
+    console.error("❌ Maison introuvable avec id:", this.maisonId);
+    return next(new Error("Aucun maison trouvé avec cet id"));
   }
 
   this.montant = this.kwh * maison.tarifKwh;
-  next();
-})
+  console.log("✅ kwh et montant calculés:", this.kwh, this.montant);
 
+  next();
+});
 
 // Méthode pour obtenir la période (mois/année)
 consommationSchema.virtual('periode').get(function() {
