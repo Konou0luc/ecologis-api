@@ -7,6 +7,10 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Requis derrière un proxy (Vercel) pour que req.ip soit correct et
+// que express-rate-limit n'échoue pas avec X-Forwarded-For
+app.set('trust proxy', 1);
+
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -14,13 +18,17 @@ app.use(express.urlencoded({ extended: true }));
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5, // 5 tentatives par IP
-  message: 'Trop de tentatives de connexion, réessayez plus tard'
+  message: 'Trop de tentatives, réessayez plus tard',
+  standardHeaders: true, // Retourne les infos dans les headers RateLimit-*
+  legacyHeaders: false, // Désactive X-RateLimit-*
 });
 
 const residentLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 10, // 10 requêtes par IP
-  message: 'Trop de requêtes, réessayez plus tard'
+  message: 'Trop de requêtes, réessayez plus tard',
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 
 app.use('/auth', authLimiter, require('./routes/auth'));
