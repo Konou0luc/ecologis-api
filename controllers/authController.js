@@ -181,15 +181,21 @@ const changePassword = async (req, res) => {
   try {
     const { motDePasseActuel, nouveauMotDePasse } = req.body;
 
+    // Recharger l'utilisateur avec le mot de passe (le middleware exclut ce champ)
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: 'Utilisateur non trouvé' });
+    }
+
     // Vérifier l'ancien mot de passe
-    const isPasswordValid = await req.user.comparePassword(motDePasseActuel);
+    const isPasswordValid = await user.comparePassword(motDePasseActuel);
     if (!isPasswordValid) {
       return res.status(400).json({ message: 'Mot de passe actuel incorrect' });
     }
 
     // Mettre à jour le mot de passe
-    req.user.motDePasse = nouveauMotDePasse;
-    await req.user.save();
+    user.motDePasse = nouveauMotDePasse;
+    await user.save();
 
     res.json({ message: 'Mot de passe mis à jour avec succès' });
   } catch (error) {

@@ -47,7 +47,7 @@ const sendFactureNotification = async (telephone, numeroFacture, montant, dateEc
   try {
     console.log(`📱 Notification facture WhatsApp simulée envoyée à ${telephone}:`);
     console.log(`Facture: ${numeroFacture}`);
-    console.log(`Montant: ${montant}€`);
+    console.log(`Montant: ${montant}FCFA`);
     console.log(`Échéance: ${dateEcheance}`);
     
     // Simuler un délai d'envoi
@@ -73,7 +73,7 @@ const sendPaymentReminder = async (telephone, numeroFacture, montant, joursRetar
   try {
     console.log(`📱 Rappel de paiement WhatsApp simulé envoyé à ${telephone}:`);
     console.log(`Facture: ${numeroFacture}`);
-    console.log(`Montant: ${montant}€`);
+    console.log(`Montant: ${montant}FCFA`);
     console.log(`Jours de retard: ${joursRetard}`);
     
     // Simuler un délai d'envoi
