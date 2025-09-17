@@ -222,11 +222,17 @@ const getCurrentUser = async (req, res) => {
       abonnement = await Abonnement.findById(user.abonnementId);
     }
 
-    // Récupérer les maisons si c'est un propriétaire
+    // Récupérer les maisons
     let maisons = [];
+    const Maison = require('../models/Maison');
     if (user.role === 'proprietaire') {
-      const Maison = require('../models/Maison');
       maisons = await Maison.find({ proprietaireId: user._id });
+    } else if (user.role === 'resident' && user.maisonId) {
+      // Pour les résidents, récupérer leur maison
+      const maison = await Maison.findById(user.maisonId);
+      if (maison) {
+        maisons = [maison];
+      }
     }
 
     // Récupérer les résidents si c'est un propriétaire

@@ -6,7 +6,16 @@ const { checkSubscription } = require('../middlewares/checkSubscription');
 
 // Toutes les routes nécessitent une authentification
 router.use(authenticateToken);
-router.use(checkSubscription);
+
+// Middleware de vérification d'abonnement pour les propriétaires seulement
+router.use((req, res, next) => {
+  // Si c'est une route résident, passer au suivant sans vérifier l'abonnement
+  if (req.path.startsWith('/resident/') && req.user.role === 'resident') {
+    return next();
+  }
+  // Sinon, vérifier l'abonnement
+  return checkSubscription(req, res, next);
+});
 
 // POST /factures/generer/:residentId - Générer une facture pour un résident
 router.post('/generer/:residentId', facturesController.generateFacture);
