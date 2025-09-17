@@ -57,15 +57,16 @@ const requireAdmin = (req, res, next) => {
   next();
 };
 
-// Middleware pour vérifier si c'est le premier login
+// Middleware pour exiger le changement de mot de passe au premier login
+// Autorise la route de reset uniquement si firstLogin === true
 const requirePasswordChange = (req, res, next) => {
   if (req.user.firstLogin) {
-    return res.status(403).json({ 
-      message: 'Changement de mot de passe requis',
-      firstLogin: true 
-    });
+    return next();
   }
-  next();
+  return res.status(400).json({
+    message: 'Cette opération n\'est pas nécessaire',
+    firstLogin: false
+  });
 };
 
 // Middleware pour vérifier le refresh token

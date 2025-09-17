@@ -1,13 +1,13 @@
-// Générer un mot de passe temporaire aléatoire
+// Générer un mot de passe temporaire lisible (évite les caractères ambigus)
 const generateTemporaryPassword = (length = 8) => {
-  const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const readableCharset = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789'; // sans O,0, I,1, l
   let password = '';
-  
+
   for (let i = 0; i < length; i++) {
-    const randomIndex = Math.floor(Math.random() * charset.length);
-    password += charset[randomIndex];
+    const randomIndex = Math.floor(Math.random() * readableCharset.length);
+    password += readableCharset[randomIndex];
   }
-  
+
   return password;
 };
 
