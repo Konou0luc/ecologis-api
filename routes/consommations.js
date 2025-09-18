@@ -32,4 +32,13 @@ router.put('/:id', consommationsController.updateConsommation);
 // DELETE /consommations/:id - Supprimer une consommation
 router.delete('/:id', consommationsController.deleteConsommation);
 
+// ===== ROUTES SPÉCIFIQUES POUR LES RÉSIDENTS =====
+// Ces routes permettent aux résidents de récupérer leurs propres données sans passer par l'ID dans l'URL
+
+// GET /consommations/my-consommations - Consommations du résident connecté
+router.get('/my-consommations', consommationsController.getMyConsommations);
+
+// GET /consommations/my-maison - Consommations de la maison du résident connecté
+router.get('/my-maison', consommationsController.getMyMaisonConsommations);
+
 module.exports = router;

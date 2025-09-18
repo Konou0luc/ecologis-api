@@ -329,10 +329,137 @@ const getFacturesByMaison = async (req, res) => {
   }
 };
 
+// ===== NOUVELLES FONCTIONS POUR LES RÉSIDENTS =====
+
+// Obtenir les factures du résident connecté (sans passer par l'ID dans l'URL)
+const getMyFactures = async (req, res) => {
+  try {
+    // Vérifier que l'utilisateur est un résident
+    if (req.user.role !== 'resident') {
+      return res.status(403).json({ message: 'Accès non autorisé - Résident requis' });
+    }
+
+    const { statut, annee } = req.query;
+
+    // Construire la requête pour le résident connecté
+    const query = { residentId: req.user._id };
+    if (statut) query.statut = statut;
+    if (annee) {
+      query.dateEmission = {
+        $gte: new Date(parseInt(annee), 0, 1),
+        $lt: new Date(parseInt(annee) + 1, 0, 1)
+      };
+    }
+
+    const factures = await Facture.find(query)
+      .populate('consommationId', 'kwh mois annee')
+      .populate('maisonId', 'nomMaison adresse')
+      .sort({ dateEmission: -1 });
+
+    // Calculer les statistiques
+    const totalMontant = factures.reduce((sum, facture) => sum + facture.montant, 0);
+    const facturesPayees = factures.filter(f => f.statut === 'payée');
+    const totalPaye = facturesPayees.reduce((sum, facture) => sum + facture.montant, 0);
+    const facturesEnRetard = factures.filter(f => f.statut === 'en retard');
+
+    res.json({
+      factures,
+      statistiques: {
+        totalFactures: factures.length,
+        totalMontant,
+        totalPaye,
+        totalImpaye: totalMontant - totalPaye,
+        facturesPayees: facturesPayees.length,
+        facturesEnRetard: facturesEnRetard.length
+      },
+      message: 'Factures récupérées avec succès'
+    });
+  } catch (error) {
+    console.error('Erreur lors de la récupération des factures du résident:', error);
+    res.status(500).json({ message: 'Erreur lors de la récupération des factures' });
+  }
+};
+
+// Obtenir les factures de la maison du résident connecté
+const getMyMaisonFactures = async (req, res) => {
+  try {
+    // Vérifier que l'utilisateur est un résident
+    if (req.user.role !== 'resident') {
+      return res.status(403).json({ message: 'Accès non autorisé - Résident requis' });
+    }
+
+    // Récupérer la maison du résident
+    const maison = await Maison.findOne({
+      listeResidents: req.user._id
+    });
+
+    if (!maison) {
+      return res.status(404).json({ message: 'Aucune maison trouvée pour ce résident' });
+    }
+
+    const { statut, annee } = req.query;
+
+    // Construire la requête pour la maison du résident
+    const query = { maisonId: maison._id };
+    if (statut) query.statut = statut;
+    if (annee) {
+      query.dateEmission = {
+        $gte: new Date(parseInt(annee), 0, 1),
+        $lt: new Date(parseInt(annee) + 1, 0, 1)
+      };
+    }
+
+    const factures = await Facture.find(query)
+      .populate('residentId', 'nom prenom')
+      .populate('consommationId', 'kwh mois annee')
+      .sort({ dateEmission: -1 });
+
+    // Calculer les statistiques par résident
+    const statsParResident = {};
+    factures.forEach(facture => {
+      const residentId = facture.residentId._id.toString();
+      if (!statsParResident[residentId]) {
+        statsParResident[residentId] = {
+          resident: facture.residentId,
+          totalFactures: 0,
+          totalMontant: 0,
+          totalPaye: 0,
+          facturesEnRetard: 0
+        };
+      }
+      statsParResident[residentId].totalFactures += 1;
+      statsParResident[residentId].totalMontant += facture.montant;
+      if (facture.statut === 'payée') {
+        statsParResident[residentId].totalPaye += facture.montant;
+      }
+      if (facture.statut === 'en retard') {
+        statsParResident[residentId].facturesEnRetard += 1;
+      }
+    });
+
+    res.json({
+      factures,
+      statistiquesParResident: Object.values(statsParResident),
+      maison: {
+        _id: maison._id,
+        nomMaison: maison.nomMaison,
+        adresse: maison.adresse
+      },
+      message: 'Factures de la maison récupérées avec succès'
+    });
+  } catch (error) {
+    console.error('Erreur lors de la récupération des factures de la maison:', error);
+    res.status(500).json({ message: 'Erreur lors de la récupération des factures de la maison' });
+  }
+};
+
 module.exports = {
   generateFacture,
   getFacturesByResident,
   markFactureAsPaid,
   getFacture,
-  getFacturesByMaison
+  getFacturesByMaison,
+  // Nouvelles fonctions pour les résidents
+  getMyFactures,
+  getMyMaisonFactures
 };

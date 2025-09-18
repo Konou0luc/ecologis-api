@@ -227,9 +227,9 @@ const getCurrentUser = async (req, res) => {
     const Maison = require('../models/Maison');
     if (user.role === 'proprietaire') {
       maisons = await Maison.find({ proprietaireId: user._id });
-    } else if (user.role === 'resident' && user.maisonId) {
-      // Pour les résidents, récupérer leur maison
-      const maison = await Maison.findById(user.maisonId);
+    } else if (user.role === 'resident') {
+      // Pour les résidents, récupérer leur maison via la liste des résidents
+      const maison = await Maison.findOne({ listeResidents: user._id });
       if (maison) {
         maisons = [maison];
       }

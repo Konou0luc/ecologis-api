@@ -315,10 +315,120 @@ const deleteConsommation = async (req, res) => {
   }
 };
 
+// ===== NOUVELLES FONCTIONS POUR LES RÉSIDENTS =====
+
+// Obtenir les consommations du résident connecté (sans passer par l'ID dans l'URL)
+const getMyConsommations = async (req, res) => {
+  try {
+    // Vérifier que l'utilisateur est un résident
+    if (req.user.role !== 'resident') {
+      return res.status(403).json({ message: 'Accès non autorisé - Résident requis' });
+    }
+
+    const { annee, mois } = req.query;
+
+    // Construire la requête pour le résident connecté
+    const query = { residentId: req.user._id };
+    if (annee) query.annee = parseInt(annee);
+    if (mois) query.mois = parseInt(mois);
+
+    const consommations = await Consommation.find(query)
+      .populate("maisonId", "nomMaison adresse")
+      .sort({ annee: -1, mois: -1 });
+
+    // Calculer les statistiques
+    const totalKwh = consommations.reduce((s, c) => s + c.kwh, 0);
+    const totalMontant = consommations.reduce((s, c) => s + c.montant, 0);
+    const moyenneKwh = consommations.length > 0 ? totalKwh / consommations.length : 0;
+
+    res.json({
+      consommations,
+      statistiques: {
+        totalKwh,
+        totalMontant,
+        moyenneKwh,
+        nombreReleves: consommations.length,
+      },
+      message: 'Consommations récupérées avec succès'
+    });
+  } catch (error) {
+    console.error("Erreur lors de la récupération des consommations du résident:", error);
+    res
+      .status(500)
+      .json({ message: "Erreur lors de la récupération des consommations" });
+  }
+};
+
+// Obtenir les consommations de la maison du résident connecté
+const getMyMaisonConsommations = async (req, res) => {
+  try {
+    // Vérifier que l'utilisateur est un résident
+    if (req.user.role !== 'resident') {
+      return res.status(403).json({ message: 'Accès non autorisé - Résident requis' });
+    }
+
+    // Récupérer la maison du résident
+    const maison = await Maison.findOne({
+      listeResidents: req.user._id
+    });
+
+    if (!maison) {
+      return res.status(404).json({ message: 'Aucune maison trouvée pour ce résident' });
+    }
+
+    const { annee, mois } = req.query;
+
+    // Construire la requête pour la maison du résident
+    const query = { maisonId: maison._id };
+    if (annee) query.annee = parseInt(annee);
+    if (mois) query.mois = parseInt(mois);
+
+    const consommations = await Consommation.find(query)
+      .populate("residentId", "nom prenom email")
+      .sort({ annee: -1, mois: -1, "residentId.nom": 1 });
+
+    // Calculer les statistiques par résident
+    const statsParResident = {};
+    consommations.forEach((conso) => {
+      const rId = conso.residentId._id.toString();
+      if (!statsParResident[rId]) {
+        statsParResident[rId] = {
+          resident: conso.residentId,
+          totalKwh: 0,
+          totalMontant: 0,
+          nombreReleves: 0,
+        };
+      }
+      statsParResident[rId].totalKwh += conso.kwh;
+      statsParResident[rId].totalMontant += conso.montant;
+      statsParResident[rId].nombreReleves += 1;
+    });
+
+    res.json({
+      consommations,
+      statistiquesParResident: Object.values(statsParResident),
+      maison: { 
+        _id: maison._id, 
+        nomMaison: maison.nomMaison,
+        adresse: maison.adresse
+      },
+      message: 'Consommations de la maison récupérées avec succès'
+    });
+  } catch (error) {
+    console.error("Erreur lors de la récupération des consommations de la maison:", error);
+    res
+      .status(500)
+      .json({ message: "Erreur lors de la récupération des consommations de la maison" });
+  }
+};
+
 module.exports = {
   addConsommation,
   getConsommationsByResident,
   getConsommationsByMaison,
   updateConsommation,
   deleteConsommation,
+  // Nouvelles fonctions pour les résidents
+  getMyConsommations,
+  getMyMaisonConsommations,
 };

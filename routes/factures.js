@@ -32,4 +32,13 @@ router.get('/:id', facturesController.getFacture);
 // PUT /factures/:id/payer - Marquer une facture comme payée
 router.put('/:id/payer', facturesController.markFactureAsPaid);
 
+// ===== ROUTES SPÉCIFIQUES POUR LES RÉSIDENTS =====
+// Ces routes permettent aux résidents de récupérer leurs propres données sans passer par l'ID dans l'URL
+
+// GET /factures/my-factures - Factures du résident connecté
+router.get('/my-factures', facturesController.getMyFactures);
+
+// GET /factures/my-maison-factures - Factures de la maison du résident connecté
+router.get('/my-maison-factures', facturesController.getMyMaisonFactures);
+
 module.exports = router;
