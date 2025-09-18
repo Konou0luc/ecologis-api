@@ -26,19 +26,20 @@ router.get('/resident/:residentId', consommationsController.getConsommationsByRe
 // GET /consommations/maison/:maisonId - Consommations d'une maison
 router.get('/maison/:maisonId', consommationsController.getConsommationsByMaison);
 
-// PUT /consommations/:id - Mettre à jour une consommation
-router.put('/:id', consommationsController.updateConsommation);
-
-// DELETE /consommations/:id - Supprimer une consommation
-router.delete('/:id', consommationsController.deleteConsommation);
-
 // ===== ROUTES SPÉCIFIQUES POUR LES RÉSIDENTS =====
 // Ces routes permettent aux résidents de récupérer leurs propres données sans passer par l'ID dans l'URL
+// IMPORTANT: Ces routes doivent être définies AVANT /:id pour éviter les conflits
 
 // GET /consommations/my-consommations - Consommations du résident connecté
 router.get('/my-consommations', consommationsController.getMyConsommations);
 
 // GET /consommations/my-maison - Consommations de la maison du résident connecté
 router.get('/my-maison', consommationsController.getMyMaisonConsommations);
+
+// PUT /consommations/:id - Mettre à jour une consommation
+router.put('/:id', consommationsController.updateConsommation);
+
+// DELETE /consommations/:id - Supprimer une consommation
+router.delete('/:id', consommationsController.deleteConsommation);
 
 module.exports = router;

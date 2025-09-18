@@ -45,6 +45,9 @@ const maisonSchema = new mongoose.Schema({
 
 // Méthode pour ajouter un résident
 maisonSchema.methods.ajouterResident = function(residentId) {
+  if (!this.listeResidents) {
+    this.listeResidents = [];
+  }
   if (!this.listeResidents.includes(residentId)) {
     this.listeResidents.push(residentId);
     return this.save();
@@ -54,13 +57,16 @@ maisonSchema.methods.ajouterResident = function(residentId) {
 
 // Méthode pour retirer un résident
 maisonSchema.methods.retirerResident = function(residentId) {
+  if (!this.listeResidents) {
+    this.listeResidents = [];
+  }
   this.listeResidents = this.listeResidents.filter(id => !id.equals(residentId));
   return this.save();
 };
 
 // Méthode pour obtenir le nombre de résidents
 maisonSchema.virtual('nbResidents').get(function() {
-  return this.listeResidents.length;
+  return this.listeResidents ? this.listeResidents.length : 0;
 });
 
 // Configuration pour inclure les virtuals dans les réponses JSON

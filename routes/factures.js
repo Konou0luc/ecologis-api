@@ -26,19 +26,20 @@ router.get('/resident/:residentId', facturesController.getFacturesByResident);
 // GET /factures/maison/:maisonId - Factures d'une maison
 router.get('/maison/:maisonId', facturesController.getFacturesByMaison);
 
-// GET /factures/:id - Obtenir une facture spécifique
-router.get('/:id', facturesController.getFacture);
-
-// PUT /factures/:id/payer - Marquer une facture comme payée
-router.put('/:id/payer', facturesController.markFactureAsPaid);
-
 // ===== ROUTES SPÉCIFIQUES POUR LES RÉSIDENTS =====
 // Ces routes permettent aux résidents de récupérer leurs propres données sans passer par l'ID dans l'URL
+// IMPORTANT: Ces routes doivent être définies AVANT /:id pour éviter les conflits
 
 // GET /factures/my-factures - Factures du résident connecté
 router.get('/my-factures', facturesController.getMyFactures);
 
 // GET /factures/my-maison-factures - Factures de la maison du résident connecté
 router.get('/my-maison-factures', facturesController.getMyMaisonFactures);
+
+// GET /factures/:id - Obtenir une facture spécifique
+router.get('/:id', facturesController.getFacture);
+
+// PUT /factures/:id/payer - Marquer une facture comme payée
+router.put('/:id/payer', facturesController.markFactureAsPaid);
 
 module.exports = router;
