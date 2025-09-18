@@ -9,8 +9,8 @@ router.use(authenticateToken);
 
 // Middleware de vérification d'abonnement pour les propriétaires seulement
 router.use((req, res, next) => {
-  // Si c'est une route résident, passer au suivant sans vérifier l'abonnement
-  if (req.path.startsWith('/resident/') && req.user.role === 'resident') {
+  // Si c'est une route résident (my-factures, my-maison-factures) ou si l'utilisateur est un résident, passer au suivant sans vérifier l'abonnement
+  if ((req.path.startsWith('/my-') || req.path.startsWith('/resident/')) && req.user.role === 'resident') {
     return next();
   }
   // Sinon, vérifier l'abonnement
