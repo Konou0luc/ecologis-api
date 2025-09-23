@@ -256,6 +256,28 @@ const getCurrentUser = async (req, res) => {
   }
 };
 
+// Enregistrer/mettre à jour le device token FCM de l'utilisateur connecté
+const setDeviceToken = async (req, res) => {
+  try {
+    const { deviceToken } = req.body;
+
+    if (!deviceToken || typeof deviceToken !== 'string') {
+      return res.status(400).json({ message: 'deviceToken requis' });
+    }
+
+    req.user.deviceToken = deviceToken;
+    await req.user.save();
+
+    return res.json({
+      message: 'Device token mis à jour avec succès',
+      deviceToken: req.user.deviceToken,
+    });
+  } catch (error) {
+    console.error('💥 [API] Erreur lors de la mise à jour du deviceToken:', error);
+    return res.status(500).json({ message: 'Erreur lors de la mise à jour du device token' });
+  }
+};
+
 module.exports = {
   register,
   login,
@@ -263,5 +285,6 @@ module.exports = {
   logout,
   resetPassword,
   changePassword,
-  getCurrentUser
+  getCurrentUser,
+  setDeviceToken
 };

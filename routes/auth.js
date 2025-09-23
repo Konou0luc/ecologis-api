@@ -25,6 +25,9 @@ router.post('/change-password', authenticateToken, authController.changePassword
 // GET /auth/me - Récupérer les informations de l'utilisateur connecté
 router.get('/me', authenticateToken, authController.getCurrentUser);
 
+// POST /auth/device-token - Enregistrer le token FCM de l'utilisateur
+router.post('/device-token', authenticateToken, authController.setDeviceToken);
+
 /**
  * Route admin à ajouter dans un futur UsersController:
  * PATCH /users/:id/make-admin
