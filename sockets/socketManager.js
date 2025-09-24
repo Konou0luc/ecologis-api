@@ -69,7 +69,7 @@ const socketManager = (io) => {
           }
         });
 
-        console.log(`Utilisateur authentifié: ${user.nomComplet} (${user.role})`);
+        console.log(`✅ [Socket] Utilisateur authentifié: ${user.nomComplet} (${user.role}) - ID: ${user._id}`);
       } catch (error) {
         console.error('Erreur d\'authentification socket:', error);
         socket.emit('auth_error', { message: 'Erreur d\'authentification' });
@@ -79,9 +79,11 @@ const socketManager = (io) => {
     // Envoyer un message privé
     socket.on('send_private_message', async (data) => {
       try {
+        console.log('🔵 [Socket] Reçu send_private_message:', data);
         const { receiverId, contenu, maisonId } = data;
 
         if (!socket.userId) {
+          console.log('🔴 [Socket] Utilisateur non authentifié');
           socket.emit('error', { message: 'Non authentifié' });
           return;
         }
@@ -96,6 +98,7 @@ const socketManager = (io) => {
         });
 
         await message.save();
+        console.log('✅ [Socket] Message sauvegardé en base:', message._id);
 
         // Émettre vers le destinataire
         const receiverSocket = connectedUsers.get(receiverId);
