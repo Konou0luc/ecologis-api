@@ -1,4 +1,22 @@
 const Maison = require('../models/Maison');
+
+// GET /maisons/:id - détaillée avec residents
+exports.getMaisonById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const maison = await Maison.findById(id)
+      .populate('listeResidents')
+      .populate('proprietaireId');
+    if (!maison) {
+      return res.status(404).json({ message: 'Maison non trouvée' });
+    }
+    res.json(maison);
+  } catch (error) {
+    console.error('💥 [API] getMaisonById error:', error);
+    res.status(500).json({ message: 'Erreur lors de la récupération de la maison' });
+  }
+};
+const Maison = require('../models/Maison');
 const User = require('../models/User');
 
 // Créer une maison
