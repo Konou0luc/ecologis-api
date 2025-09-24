@@ -37,6 +37,7 @@ app.use('/consommations', require('./routes/consommations'));
 app.use('/factures', require('./routes/factures'));
 app.use('/abonnements', require('./routes/abonnements'));
 app.use('/maisons', require('./routes/maisons'));
+app.use('/messages', require('./routes/messages'));
 
 app.get('/', (req, res) => {
   res.json({ message: 'API Ecologis - Gestion de consommation électrique' });
