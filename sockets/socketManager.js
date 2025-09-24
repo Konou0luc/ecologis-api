@@ -110,6 +110,13 @@ const socketManager = (io) => {
             }
           });
         }
+        // Notification push si deviceToken disponible (via utils/notifications)
+        try {
+          const notifications = require('../utils/notifications');
+          await notifications.envoyer(receiverId, `Nouveau message de ${socket.userNom}`);
+        } catch (e) {
+          console.error('Notif push (privé) échouée:', e?.message || e);
+        }
 
         // Confirmation à l'expéditeur
         socket.emit('message_sent', {
@@ -169,6 +176,25 @@ const socketManager = (io) => {
             }
           }
         });
+
+        // Notifier les membres de la maison (hors émetteur)
+        try {
+          const maisonMembers = [];
+          // Ajouter le propriétaire
+          if (maison.proprietaireId) maisonMembers.push(maison.proprietaireId.toString());
+          // Ajouter les résidents
+          if (Array.isArray(maison.listeResidents)) {
+            maison.listeResidents.forEach(uid => maisonMembers.push(uid.toString()));
+          }
+          const notifications = require('../utils/notifications');
+          for (const uid of maisonMembers) {
+            if (uid !== socket.userId.toString()) {
+              await notifications.envoyer(uid, `Nouveau message dans ${maison._id.toString()}`);
+            }
+          }
+        } catch (e) {
+          console.error('Notif push (groupe) échouée:', e?.message || e);
+        }
 
         // Confirmation à l'expéditeur
         socket.emit('message_sent', {
