@@ -2,8 +2,8 @@ const express = require('express');
 const router = express.Router();
 const maisonsController = require('../controllers/maisonsController');
 const { authenticateToken } = require('../middlewares/auth');
-// Get maison détaillée avec residents
-router.get('/:id', authenticateToken, maisonsController.getMaisonById);
+// Get maison détaillée avec residents (chemin distinct pour éviter conflit)
+router.get('/:id/full', authenticateToken, maisonsController.getMaisonById);
 
 // Toutes les routes nécessitent une authentification
 router.use(authenticateToken);

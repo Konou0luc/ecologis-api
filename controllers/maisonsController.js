@@ -1,7 +1,8 @@
 const Maison = require('../models/Maison');
+const User = require('../models/User');
 
 // GET /maisons/:id - détaillée avec residents
-exports.getMaisonById = async (req, res) => {
+const getMaisonById = async (req, res) => {
   try {
     const { id } = req.params;
     const maison = await Maison.findById(id)
@@ -16,8 +17,6 @@ exports.getMaisonById = async (req, res) => {
     res.status(500).json({ message: 'Erreur lors de la récupération de la maison' });
   }
 };
-const Maison = require('../models/Maison');
-const User = require('../models/User');
 
 // Créer une maison
 const createMaison = async (req, res) => {
@@ -296,5 +295,6 @@ module.exports = {
   deleteMaison,
   addResidentToMaison,
   removeResidentFromMaison,
-  updateMaisonTarif
+  updateMaisonTarif,
+  getMaisonById
 };
