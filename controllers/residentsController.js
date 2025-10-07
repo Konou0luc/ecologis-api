@@ -3,6 +3,7 @@ const User = require('../models/User');
 const Maison = require('../models/Maison');
 const { generateTemporaryPassword } = require('../utils/passwordUtils');
 const { sendWhatsAppCredentials } = require('../utils/whatsappUtils');
+const notifications = require('../utils/notifications');
 
 // Ajouter un résident
 const addResident = async (req, res) => {
@@ -52,6 +53,13 @@ const addResident = async (req, res) => {
       email,
       motDePasseTemporaire
     );
+
+    // Notifier le propriétaire qu'un résident a été ajouté
+    try {
+      await notifications.notifyNewResident(resident._id, req.user._id);
+    } catch (e) {
+      console.error('FCM new resident erreur:', e?.message || e);
+    }
 
     res.status(201).json({
       message: 'Résident ajouté avec succès',

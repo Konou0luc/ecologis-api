@@ -3,6 +3,7 @@ const Consommation = require('../models/Consommation');
 const User = require('../models/User');
 const Maison = require('../models/Maison');
 const { sendFactureNotification } = require('../utils/whatsappUtils');
+const notifications = require('../utils/notifications');
 
 // Générer une facture pour un résident
 const generateFacture = async (req, res) => {
@@ -95,6 +96,13 @@ const generateFacture = async (req, res) => {
         montant,
         dateEcheance
       );
+    }
+
+    // Envoyer aussi une notification FCM au résident
+    try {
+      await notifications.envoyer(residentId, `Nouvelle facture ${numeroFacture}: ${montant} FCFA`);
+    } catch (e) {
+      console.error('FCM facture erreur:', e?.message || e);
     }
 
     res.status(201).json({
