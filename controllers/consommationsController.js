@@ -2,7 +2,6 @@ const Consommation = require("../models/Consommation");
 const User = require("../models/User");
 const Maison = require("../models/Maison");
 const notifications = require("../utils/notifications");
-const notifications = require("../utils/notifications");
 // Enregistrer une consommation
 const addConsommation = async (req, res) => {
   try {
