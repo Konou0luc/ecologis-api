@@ -181,6 +181,12 @@ const getAbonnementActuel = async (req, res) => {
       return res.status(404).json({ message: 'Abonnement non trouvé' });
     }
 
+    // Vérifier et mettre à jour le statut de l'abonnement
+    const isActif = abonnement.isActif();
+    
+    // Recharger l'abonnement pour avoir les données mises à jour
+    await abonnement.save();
+
     // Compter le nombre de résidents actuels
     const nbResidentsActuels = await User.countDocuments({
       idProprietaire: req.user._id,
@@ -193,7 +199,7 @@ const getAbonnementActuel = async (req, res) => {
         nbResidentsActuels,
         nbResidentsMax: abonnement.nbResidentsMax,
         joursRestants: abonnement.joursRestants(),
-        isActif: abonnement.isActif()
+        isActif: isActif
       }
     });
   } catch (error) {

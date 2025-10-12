@@ -90,6 +90,11 @@ const login = async (req, res) => {
     let abonnement = null;
     if (user.role === 'proprietaire' && user.abonnementId) {
       abonnement = await Abonnement.findById(user.abonnementId);
+      if (abonnement) {
+        // Vérifier et mettre à jour le statut de l'abonnement
+        abonnement.isActif();
+        await abonnement.save();
+      }
     }
 
     res.json({
@@ -220,6 +225,11 @@ const getCurrentUser = async (req, res) => {
     let abonnement = null;
     if (user.role === 'proprietaire' && user.abonnementId) {
       abonnement = await Abonnement.findById(user.abonnementId);
+      if (abonnement) {
+        // Vérifier et mettre à jour le statut de l'abonnement
+        abonnement.isActif();
+        await abonnement.save();
+      }
     }
 
     // Récupérer les maisons

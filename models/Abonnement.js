@@ -45,7 +45,16 @@ const abonnementSchema = new mongoose.Schema({
 
 // Méthode pour vérifier si l'abonnement est actif
 abonnementSchema.methods.isActif = function() {
-  return this.statut === 'actif' && this.dateFin > new Date();
+  const maintenant = new Date();
+  
+  // Si la date de fin est dépassée, marquer comme expiré
+  if (this.dateFin <= maintenant && this.statut === 'actif') {
+    this.statut = 'expiré';
+    this.isActive = false;
+    this.save().catch(err => console.error('Erreur lors de la mise à jour du statut:', err));
+  }
+  
+  return this.statut === 'actif' && this.dateFin > maintenant && this.isActive === true;
 };
 
 // Méthode pour calculer les jours restants
@@ -62,7 +71,28 @@ abonnementSchema.methods.renouveler = function() {
   nouvelleDateFin.setMonth(nouvelleDateFin.getMonth() + 1);
   this.dateFin = nouvelleDateFin;
   this.statut = 'actif';
+  this.isActive = true;
   return this.save();
+};
+
+// Méthode statique pour vérifier et mettre à jour tous les abonnements expirés
+abonnementSchema.statics.updateExpiredSubscriptions = async function() {
+  const maintenant = new Date();
+  const result = await this.updateMany(
+    {
+      statut: 'actif',
+      dateFin: { $lte: maintenant }
+    },
+    {
+      $set: {
+        statut: 'expiré',
+        isActive: false
+      }
+    }
+  );
+  
+  console.log(`📅 [ABONNEMENT] ${result.modifiedCount} abonnements marqués comme expirés`);
+  return result;
 };
 
 // Index pour optimiser les requêtes

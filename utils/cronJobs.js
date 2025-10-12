@@ -8,18 +8,10 @@ const checkExpiredSubscriptions = async () => {
   try {
     console.log('🕐 Vérification des abonnements expirés...');
     
-    const abonnementsExpires = await Abonnement.find({
-      dateFin: { $lt: new Date() },
-      statut: 'actif'
-    });
-
-    for (const abonnement of abonnementsExpires) {
-      abonnement.statut = 'expiré';
-      await abonnement.save();
-      console.log(`❌ Abonnement expiré: ${abonnement._id} (${abonnement.type})`);
-    }
-
-    console.log(`✅ ${abonnementsExpires.length} abonnements marqués comme expirés`);
+    // Utiliser la méthode statique du modèle
+    const result = await Abonnement.updateExpiredSubscriptions();
+    
+    console.log(`✅ ${result.modifiedCount} abonnements marqués comme expirés`);
   } catch (error) {
     console.error('❌ Erreur lors de la vérification des abonnements expirés:', error);
   }
