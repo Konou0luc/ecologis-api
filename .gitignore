@@ -1,3 +1,4 @@
 node_modules
 .env
 config/ecologis-833c5-firebase-adminsdk-fbsvc-73e15ab86a.json
+uploads/

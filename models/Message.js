@@ -23,7 +23,7 @@ const messageSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['text', 'facture', 'system', 'notification'],
+    enum: ['text', 'facture', 'system', 'notification', 'image', 'file', 'audio', 'video'],
     default: 'text'
   },
   dateEnvoi: {
@@ -51,6 +51,27 @@ const messageSchema = new mongoose.Schema({
     },
     montant: {
       type: Number,
+      default: null
+    },
+    // Métadonnées pour les fichiers
+    fileName: {
+      type: String,
+      default: null
+    },
+    fileSize: {
+      type: Number,
+      default: null
+    },
+    fileType: {
+      type: String,
+      default: null
+    },
+    fileUrl: {
+      type: String,
+      default: null
+    },
+    thumbnailUrl: {
+      type: String,
       default: null
     }
   },
