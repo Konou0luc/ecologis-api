@@ -3,6 +3,9 @@ const router = express.Router();
 const messagesController = require('../controllers/messagesController');
 const { authenticateToken } = require('../middlewares/auth');
 
+// Créer un message
+router.post('/', authenticateToken, messagesController.createMessage);
+
 // Historique privé
 router.get('/private/:otherUserId', authenticateToken, messagesController.getPrivateHistory);
 

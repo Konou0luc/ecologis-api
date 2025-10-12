@@ -1,6 +1,51 @@
 const Message = require('../models/Message');
 const User = require('../models/User');
 
+// POST /messages -> créer un message
+exports.createMessage = async (req, res) => {
+  try {
+    const { receiverId, contenu, maisonId } = req.body;
+    const senderId = req.user._id;
+
+    // Validation des données
+    if (!contenu || contenu.trim().length === 0) {
+      return res.status(400).json({ message: 'Le contenu du message est requis' });
+    }
+
+    if (!maisonId) {
+      return res.status(400).json({ message: 'L\'ID de la maison est requis' });
+    }
+
+    // Créer le message
+    const message = new Message({
+      senderId,
+      receiverId: receiverId || null, // null pour les messages de groupe
+      maisonId,
+      contenu: contenu.trim(),
+      type: 'text',
+      dateEnvoi: new Date(),
+    });
+
+    await message.save();
+
+    console.log('✅ [API] Message créé:', {
+      id: message._id,
+      senderId: message.senderId,
+      receiverId: message.receiverId,
+      maisonId: message.maisonId,
+      contenu: message.contenu.substring(0, 50) + '...',
+    });
+
+    res.status(201).json({
+      message: 'Message envoyé avec succès',
+      data: message,
+    });
+  } catch (error) {
+    console.error('💥 [API] createMessage error:', error);
+    res.status(500).json({ message: 'Erreur lors de l\'envoi du message' });
+  }
+};
+
 // GET /messages/private/:otherUserId -> historique messages privés (bidirectionnels)
 exports.getPrivateHistory = async (req, res) => {
   try {
