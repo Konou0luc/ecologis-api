@@ -136,6 +136,8 @@ const souscrire = async (req, res) => {
 // Renouveler un abonnement
 const renouveler = async (req, res) => {
   try {
+    console.log('🔄 [API] Début du renouvellement d\'abonnement pour:', req.user._id);
+    
     // Vérifier que l'utilisateur est un propriétaire
     if (req.user.role !== 'proprietaire') {
       return res.status(403).json({ message: 'Seuls les propriétaires peuvent renouveler un abonnement' });
@@ -151,16 +153,42 @@ const renouveler = async (req, res) => {
       return res.status(404).json({ message: 'Abonnement non trouvé' });
     }
 
+    console.log('📅 [API] Abonnement actuel:', {
+      id: abonnement._id,
+      type: abonnement.type,
+      dateDebut: abonnement.dateDebut,
+      dateFin: abonnement.dateFin,
+      statut: abonnement.statut,
+      isActive: abonnement.isActive
+    });
+
     // Renouveler l'abonnement
     await abonnement.renouveler();
 
+    // Recharger l'abonnement pour avoir les données mises à jour
+    const abonnementRenouvele = await Abonnement.findById(req.user.abonnementId);
+
+    console.log('✅ [API] Abonnement renouvelé:', {
+      id: abonnementRenouvele._id,
+      type: abonnementRenouvele.type,
+      dateDebut: abonnementRenouvele.dateDebut,
+      dateFin: abonnementRenouvele.dateFin,
+      statut: abonnementRenouvele.statut,
+      isActive: abonnementRenouvele.isActive
+    });
+
     res.json({
       message: 'Abonnement renouvelé avec succès',
-      abonnement
+      abonnement: abonnementRenouvele,
+      success: true
     });
   } catch (error) {
-    console.error('Erreur lors du renouvellement:', error);
-    res.status(500).json({ message: 'Erreur lors du renouvellement' });
+    console.error('💥 [API] Erreur lors du renouvellement:', error);
+    res.status(500).json({ 
+      message: 'Erreur lors du renouvellement',
+      error: error.message,
+      success: false
+    });
   }
 };
 

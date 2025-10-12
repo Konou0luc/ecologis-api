@@ -67,11 +67,21 @@ abonnementSchema.methods.joursRestants = function() {
 
 // Méthode pour renouveler l'abonnement
 abonnementSchema.methods.renouveler = function() {
-  const nouvelleDateFin = new Date(this.dateFin);
+  const maintenant = new Date();
+  const nouvelleDateFin = new Date(maintenant);
   nouvelleDateFin.setMonth(nouvelleDateFin.getMonth() + 1);
+  
+  this.dateDebut = maintenant;
   this.dateFin = nouvelleDateFin;
   this.statut = 'actif';
   this.isActive = true;
+  
+  console.log(`🔄 [ABONNEMENT] Renouvellement: ${this._id}`);
+  console.log(`   - Nouvelle date début: ${this.dateDebut}`);
+  console.log(`   - Nouvelle date fin: ${this.dateFin}`);
+  console.log(`   - Statut: ${this.statut}`);
+  console.log(`   - isActive: ${this.isActive}`);
+  
   return this.save();
 };
 
