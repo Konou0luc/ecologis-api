@@ -1,6 +1,6 @@
 const Message = require('../models/Message');
 const User = require('../models/User');
-const { uploadToCloudinary } = require('../middlewares/upload');
+const { uploadBufferToCloudinary } = require('../middlewares/upload');
 
 // POST /messages/file -> créer un message avec fichier
 exports.createFileMessage = async (req, res) => {
@@ -21,11 +21,11 @@ exports.createFileMessage = async (req, res) => {
       originalName: req.file.originalname,
       mimetype: req.file.mimetype,
       size: req.file.size,
-      path: req.file.path
+      storage: 'memory'
     });
 
-    // Upload vers Cloudinary
-    const cloudinaryResult = await uploadToCloudinary(req.file.path);
+    // Upload vers Cloudinary depuis le buffer (compat. serverless)
+    const cloudinaryResult = await uploadBufferToCloudinary(req.file);
 
     // Déterminer le type de message selon le type de fichier
     let messageType = 'file';

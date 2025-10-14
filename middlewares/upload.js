@@ -10,20 +10,8 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// Configuration du stockage local temporaire
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadDir = 'uploads/messages';
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-  }
-});
+// Stockage en mémoire (compatible plateformes serverless comme Vercel)
+const storage = multer.memoryStorage();
 
 // Configuration multer
 const upload = multer({
@@ -80,27 +68,44 @@ const uploadFileMiddleware = (req, res, next) => {
   });
 };
 
-// Fonction pour uploader vers Cloudinary
-const uploadToCloudinary = async (filePath, folder = 'ecologis/messages') => {
+// Upload à partir d'un buffer vers Cloudinary
+const uploadBufferToCloudinary = async (file, folder = 'ecologis/messages') => {
   try {
-    const result = await cloudinary.uploader.upload(filePath, {
-      folder: folder,
+    const dataUri = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
+    const result = await cloudinary.uploader.upload(dataUri, {
+      folder,
       resource_type: 'auto',
       quality: 'auto',
       transformation: [
         { width: 1000, height: 1000, crop: 'limit' }
       ]
     });
-    
-    // Supprimer le fichier local après upload
-    fs.unlinkSync(filePath);
-    
     return result;
   } catch (error) {
-    console.error('Erreur upload Cloudinary:', error);
-    // Supprimer le fichier local en cas d'erreur
+    console.error('Erreur upload Cloudinary (buffer):', error);
+    throw error;
+  }
+};
+
+// (Optionnel) Upload depuis un chemin de fichier, utile en dev local
+const uploadToCloudinary = async (filePath, folder = 'ecologis/messages') => {
+  try {
+    const result = await cloudinary.uploader.upload(filePath, {
+      folder,
+      resource_type: 'auto',
+      quality: 'auto',
+      transformation: [
+        { width: 1000, height: 1000, crop: 'limit' }
+      ]
+    });
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
+    }
+    return result;
+  } catch (error) {
+    console.error('Erreur upload Cloudinary (filePath):', error);
+    if (fs.existsSync(filePath)) {
+      try { fs.unlinkSync(filePath); } catch (_) {}
     }
     throw error;
   }
@@ -109,5 +114,6 @@ const uploadToCloudinary = async (filePath, folder = 'ecologis/messages') => {
 module.exports = {
   uploadFileMiddleware,
   uploadToCloudinary,
+  uploadBufferToCloudinary,
   cloudinary
 };
