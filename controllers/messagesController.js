@@ -78,6 +78,44 @@ exports.createFileMessage = async (req, res) => {
   }
 };
 
+// Proxy/stream d'un fichier Cloudinary pour contourner les blocages publics
+exports.proxyFile = async (req, res) => {
+  try {
+    const { url } = req.query;
+    if (!url || typeof url !== 'string') {
+      return res.status(400).json({ message: 'url manquante' });
+    }
+    if (!url.includes('res.cloudinary.com')) {
+      return res.status(400).json({ message: 'URL non autorisée' });
+    }
+
+    // Petites sécurités: forcer raw si pdf/doc
+    let target = url;
+    if (target.includes('/image/upload/') && (target.endsWith('.pdf') || target.includes('application/pdf'))) {
+      target = target.replace('/image/upload/', '/raw/upload/');
+    }
+
+    const fetch = require('node-fetch');
+    const response = await fetch(target);
+    if (!response.ok) {
+      return res.status(response.status).send(await response.text());
+    }
+
+    // Propager content-type et dispo si dispo
+    const contentType = response.headers.get('content-type') || 'application/octet-stream';
+    const contentDisposition = response.headers.get('content-disposition');
+    res.setHeader('Content-Type', contentType);
+    if (contentDisposition) {
+      res.setHeader('Content-Disposition', contentDisposition);
+    }
+
+    response.body.pipe(res);
+  } catch (err) {
+    console.error('❌ [FILE PROXY] Erreur:', err);
+    res.status(500).json({ message: 'Erreur proxy fichier' });
+  }
+};
+
 // POST /messages -> créer un message
 exports.createMessage = async (req, res) => {
   try {

@@ -16,6 +16,9 @@ router.get('/private/:otherUserId', authenticateToken, messagesController.getPri
 // Historique de maison (groupe)
 router.get('/house/:maisonId', authenticateToken, messagesController.getHouseHistory);
 
+// Proxy de fichier Cloudinary
+router.get('/file/proxy', messagesController.proxyFile);
+
 module.exports = router;
 
 
