@@ -27,8 +27,10 @@ const upload = multer({
       'image/png',
       'image/gif',
       'video/mp4',
-      'audio/mp3',
+      'audio/mpeg',  // MP3
+      'audio/mp3',   // Fallback pour certains systèmes
       'audio/wav',
+      'audio/x-wav', // WAV alternatif
       'application/pdf',
       'application/msword',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -68,17 +70,26 @@ const uploadFileMiddleware = (req, res, next) => {
   });
 };
 
+// Déterminer le resource_type Cloudinary en fonction du mimetype
+function mimeToResourceType(mime) {
+  if (!mime) return 'raw';
+  if (mime.startsWith('image/')) return 'image';
+  if (mime.startsWith('video/')) return 'video';
+  if (mime.startsWith('audio/')) return 'raw';
+  // pdf, docs, txt
+  return 'raw';
+}
+
 // Upload à partir d'un buffer vers Cloudinary
 const uploadBufferToCloudinary = async (file, folder = 'ecologis/messages') => {
   try {
     const dataUri = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
     const result = await cloudinary.uploader.upload(dataUri, {
       folder,
-      resource_type: 'auto',
+      resource_type: mimeToResourceType(file.mimetype),
       quality: 'auto',
-      transformation: [
-        { width: 1000, height: 1000, crop: 'limit' }
-      ]
+      // Pas de transformation pour éviter les problèmes d'authentification
+      // Les transformations peuvent nécessiter une signature
     });
     return result;
   } catch (error) {
@@ -88,15 +99,14 @@ const uploadBufferToCloudinary = async (file, folder = 'ecologis/messages') => {
 };
 
 // (Optionnel) Upload depuis un chemin de fichier, utile en dev local
-const uploadToCloudinary = async (filePath, folder = 'ecologis/messages') => {
+const uploadToCloudinary = async (filePath, folder = 'ecologis/messages', mimetype) => {
   try {
     const result = await cloudinary.uploader.upload(filePath, {
       folder,
-      resource_type: 'auto',
+      resource_type: mimeToResourceType(mimetype),
       quality: 'auto',
-      transformation: [
-        { width: 1000, height: 1000, crop: 'limit' }
-      ]
+      // Pas de transformation pour éviter les problèmes d'authentification
+      // Les transformations peuvent nécessiter une signature
     });
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
