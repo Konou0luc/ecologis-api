@@ -87,6 +87,9 @@ const uploadBufferToCloudinary = async (file, folder = 'ecologis/messages') => {
     const result = await cloudinary.uploader.upload(dataUri, {
       folder,
       resource_type: mimeToResourceType(file.mimetype),
+      type: 'upload',
+      access_mode: 'public',
+      overwrite: true,
       quality: 'auto',
       // Pas de transformation pour éviter les problèmes d'authentification
       // Les transformations peuvent nécessiter une signature
@@ -104,6 +107,9 @@ const uploadToCloudinary = async (filePath, folder = 'ecologis/messages', mimety
     const result = await cloudinary.uploader.upload(filePath, {
       folder,
       resource_type: mimeToResourceType(mimetype),
+      type: 'upload',
+      access_mode: 'public',
+      overwrite: true,
       quality: 'auto',
       // Pas de transformation pour éviter les problèmes d'authentification
       // Les transformations peuvent nécessiter une signature
