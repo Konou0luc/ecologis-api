@@ -17,7 +17,7 @@ app.use(express.urlencoded({ extended: true }));
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // 5 tentatives par IP
+  max: 30, // 30 tentatives par IP (augmenté pour tests)
   message: 'Trop de tentatives, réessayez plus tard',
   standardHeaders: true, // Retourne les infos dans les headers RateLimit-*
   legacyHeaders: false, // Désactive X-RateLimit-*
