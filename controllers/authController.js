@@ -69,14 +69,22 @@ const login = async (req, res) => {
   try {
     const { email, motDePasse } = req.body;
 
-    // Vérifier si l'utilisateur existe
-    const user = await User.findOne({ email });
+    // Normaliser les identifiants (évite les erreurs de casse/espaces)
+    const normalizedEmail = (email || '').toString().trim().toLowerCase();
+    const normalizedPassword = (motDePasse || '').toString().trim();
+
+    // Vérifier si l'utilisateur existe (par email normalisé ou téléphone saisi à la place de l'email)
+    let user = await User.findOne({ email: normalizedEmail });
+    if (!user && email) {
+      // Si l'utilisateur a saisi son téléphone à la place de l'email
+      user = await User.findOne({ telephone: (email || '').toString().trim() });
+    }
     if (!user) {
       return res.status(401).json({ message: 'Email ou mot de passe incorrect' });
     }
 
     // Vérifier le mot de passe
-    const isPasswordValid = await user.comparePassword(motDePasse);
+    const isPasswordValid = await user.comparePassword(normalizedPassword);
     if (!isPasswordValid) {
       return res.status(401).json({ message: 'Email ou mot de passe incorrect' });
     }
