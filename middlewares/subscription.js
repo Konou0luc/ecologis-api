@@ -1,8 +1,12 @@
 const Abonnement = require('../models/Abonnement');
+const FREE_MODE = process.env.FREE_MODE === 'true';
 
 // Middleware pour vérifier si l'utilisateur a un abonnement actif
 const checkSubscription = async (req, res, next) => {
   try {
+    if (FREE_MODE) {
+      return next();
+    }
     // Seuls les propriétaires ont besoin d'un abonnement
     if (req.user.role !== 'proprietaire') {
       return next();
@@ -50,6 +54,9 @@ const checkSubscription = async (req, res, next) => {
 // Middleware pour vérifier l'abonnement sans bloquer (pour les pages d'information)
 const checkSubscriptionInfo = async (req, res, next) => {
   try {
+    if (FREE_MODE) {
+      return next();
+    }
     if (req.user.role !== 'proprietaire') {
       return next();
     }

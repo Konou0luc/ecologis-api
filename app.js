@@ -39,6 +39,11 @@ app.use('/abonnements', require('./routes/abonnements'));
 app.use('/maisons', require('./routes/maisons'));
 app.use('/messages', require('./routes/messages'));
 
+// Exposer config pour le frontend
+app.get('/config', (req, res) => {
+  res.json({ freeMode: process.env.FREE_MODE === 'true' });
+});
+
 app.get('/', (req, res) => {
   res.json({ message: 'API Ecologis - Gestion de consommation électrique' });
 });

@@ -62,6 +62,8 @@ const register = async (req, res) => {
   }
 };
 
+const FREE_MODE = process.env.FREE_MODE === 'true';
+
 // Connexion
 const login = async (req, res) => {
   try {
@@ -88,10 +90,20 @@ const login = async (req, res) => {
 
     // Récupérer l'abonnement si c'est un propriétaire
     let abonnement = null;
-    if (user.role === 'proprietaire' && user.abonnementId) {
+    if (FREE_MODE) {
+      const now = new Date();
+      const future = new Date(now);
+      future.setFullYear(future.getFullYear() + 5);
+      abonnement = {
+        statut: 'actif',
+        isActive: true,
+        dateDebut: now,
+        dateFin: future,
+        nbResidentsMax: 9999,
+      };
+    } else if (user.role === 'proprietaire' && user.abonnementId) {
       abonnement = await Abonnement.findById(user.abonnementId);
       if (abonnement) {
-        // Vérifier et mettre à jour le statut de l'abonnement
         abonnement.isActif();
         await abonnement.save();
       }
@@ -223,10 +235,20 @@ const getCurrentUser = async (req, res) => {
 
     // Récupérer l'abonnement si c'est un propriétaire
     let abonnement = null;
-    if (user.role === 'proprietaire' && user.abonnementId) {
+    if (FREE_MODE) {
+      const now = new Date();
+      const future = new Date(now);
+      future.setFullYear(future.getFullYear() + 5);
+      abonnement = {
+        statut: 'actif',
+        isActive: true,
+        dateDebut: now,
+        dateFin: future,
+        nbResidentsMax: 9999,
+      };
+    } else if (user.role === 'proprietaire' && user.abonnementId) {
       abonnement = await Abonnement.findById(user.abonnementId);
       if (abonnement) {
-        // Vérifier et mettre à jour le statut de l'abonnement
         abonnement.isActif();
         await abonnement.save();
       }

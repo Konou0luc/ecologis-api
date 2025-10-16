@@ -1,8 +1,12 @@
 const Abonnement = require('../models/Abonnement');
+const FREE_MODE = process.env.FREE_MODE === 'true';
 
 // Middleware pour vérifier que l'abonnement est actif
 const checkSubscription = async (req, res, next) => {
   try {
+    if (FREE_MODE) {
+      return next();
+    }
     // Si l'utilisateur n'est pas un propriétaire, passer au suivant
     if (req.user.role !== 'proprietaire') {
       return next();
@@ -50,6 +54,9 @@ const checkSubscription = async (req, res, next) => {
 // Middleware pour vérifier le quota de résidents
 const checkResidentQuota = async (req, res, next) => {
   try {
+    if (FREE_MODE) {
+      return next();
+    }
     if (!req.abonnement) {
       return res.status(403).json({ 
         message: 'Abonnement requis pour cette opération' 
@@ -86,6 +93,9 @@ const checkResidentQuota = async (req, res, next) => {
 // Middleware pour vérifier si l'abonnement expire bientôt (dans les 7 jours)
 const checkSubscriptionExpiry = async (req, res, next) => {
   try {
+    if (FREE_MODE) {
+      return next();
+    }
     if (!req.abonnement) {
       return next();
     }

@@ -1,4 +1,5 @@
 const cron = require('node-cron');
+const FREE_MODE = process.env.FREE_MODE === 'true';
 const Abonnement = require('../models/Abonnement');
 const Facture = require('../models/Facture');
 const { notifySubscriptionExpiry, notifyOverdueInvoices } = require('./notifications');
@@ -148,6 +149,10 @@ const checkDatabaseHealth = async () => {
 
 // Initialiser les tâches cron
 const initCronJobs = () => {
+  if (FREE_MODE) {
+    console.log('⏸️ [CRON] Mode gratuit activé: cron abonnements désactivés');
+    return;
+    }
   console.log('🚀 Initialisation des tâches cron...');
   
   // Vérifier les abonnements expirés tous les jours à 2h00

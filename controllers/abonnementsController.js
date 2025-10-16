@@ -133,9 +133,27 @@ const souscrire = async (req, res) => {
   }
 };
 
+const FREE_MODE = process.env.FREE_MODE === 'true';
+
 // Renouveler un abonnement
 const renouveler = async (req, res) => {
   try {
+    if (FREE_MODE) {
+      const now = new Date();
+      const future = new Date(now);
+      future.setFullYear(future.getFullYear() + 5);
+      return res.json({
+        message: 'Mode gratuit: abonnement considéré actif',
+        abonnement: {
+          statut: 'actif',
+          isActive: true,
+          dateDebut: now,
+          dateFin: future,
+          nbResidentsMax: 9999,
+        },
+        success: true,
+      });
+    }
     console.log('🔄 [API] Début du renouvellement d\'abonnement pour:', req.user._id);
     
     // Vérifier que l'utilisateur est un propriétaire
