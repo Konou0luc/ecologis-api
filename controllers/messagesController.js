@@ -1,6 +1,6 @@
 const Message = require('../models/Message');
 const User = require('../models/User');
-const { uploadBufferToCloudinary } = require('../middlewares/upload');
+const { uploadBufferToCloudinary, cloudinary } = require('../middlewares/upload');
 
 // POST /messages/file -> créer un message avec fichier
 exports.createFileMessage = async (req, res) => {
@@ -96,7 +96,53 @@ exports.proxyFile = async (req, res) => {
     }
 
     const fetch = require('node-fetch');
-    const response = await fetch(target);
+    let response = await fetch(target);
+
+    // Si échec d'accès direct (401/403/404), tenter URL signée Cloudinary
+    if (![200].includes(response.status)) {
+      // Essayer d'extraire public_id et format
+      // URL forme: https://res.cloudinary.com/<cloud>/[resource]/upload/.../<public_id>.<ext>
+      try {
+        const u = new URL(url);
+        const parts = u.pathname.split('/');
+        // public_id est après 'upload/'
+        const uploadIndex = parts.findIndex((p) => p === 'upload');
+        if (uploadIndex !== -1 && uploadIndex + 1 < parts.length) {
+          const publicWithExt = parts.slice(uploadIndex + 1).join('/');
+          const last = publicWithExt.split('/').pop();
+          const hasDot = last && last.includes('.');
+          const ext = hasDot ? last.split('.').pop() : undefined;
+          const publicId = hasDot
+            ? publicWithExt.substring(0, publicWithExt.lastIndexOf('.'))
+            : publicWithExt;
+
+          // Générer une URL signée téléchargeable (expirant)
+          // Utiliser raw par défaut pour PDF/doc/audio
+          const isPdf = (ext || '').toLowerCase() === 'pdf';
+          const resourceType = isPdf ? 'raw' : 'image';
+          const expiresAt = Math.floor(Date.now() / 1000) + 5 * 60; // 5 minutes
+
+          // Pour les ressources privées/authentifiées, private_download_url est recommandé
+          // On l'emploie quelle que soit la config actuelle si l'accès public échoue
+          const signedUrl = cloudinary.utils.private_download_url(
+            publicId,
+            ext || 'bin',
+            {
+              resource_type: resourceType,
+              attachment: true,
+              expires_at: expiresAt,
+            }
+          );
+
+          if (signedUrl) {
+            response = await fetch(signedUrl);
+          }
+        }
+      } catch (e) {
+        // On ignore et on retombera sur l'erreur initiale
+      }
+    }
+
     if (!response.ok) {
       return res.status(response.status).send(await response.text());
     }
