@@ -37,10 +37,11 @@ const getMyHouseResidents = async (req, res) => {
       return res.status(403).json({ message: 'Rôle non autorisé' });
     }
 
-    // Récupérer tous les résidents de cette maison spécifique
+    // Récupérer tous les résidents de cette maison spécifique (exclure le gérant)
     const residents = await User.find({
       maisonId: maisonId,
-      role: 'resident'
+      role: 'resident',
+      _id: { $ne: userId } // Exclure l'utilisateur connecté
     }).select('-motDePasse -firstLogin -createdAt -updatedAt -__v');
 
     console.log(`✅ [RESIDENTS] ${residents.length} résidents trouvés pour la maison ${maisonId}`);
