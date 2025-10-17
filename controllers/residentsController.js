@@ -11,35 +11,44 @@ const getMyHouseResidents = async (req, res) => {
     const userId = req.user._id;
     const userRole = req.user.role;
 
+    console.log(`🔍 [RESIDENTS] getMyHouseResidents appelé pour userId: ${userId}, role: ${userRole}`);
+
     // Trouver la maison de l'utilisateur
     let maisonId;
     if (userRole === 'proprietaire') {
       // Pour les propriétaires, prendre la première maison
       const maison = await Maison.findOne({ proprietaireId: userId });
       if (!maison) {
+        console.log(`❌ [RESIDENTS] Aucune maison trouvée pour le propriétaire ${userId}`);
         return res.status(404).json({ message: 'Maison non trouvée' });
       }
       maisonId = maison._id;
+      console.log(`✅ [RESIDENTS] Maison trouvée pour le propriétaire: ${maisonId}`);
     } else if (userRole === 'resident') {
       // Pour les résidents, prendre leur maisonId
       const user = await User.findById(userId);
       if (!user || !user.maisonId) {
+        console.log(`❌ [RESIDENTS] Aucune maison trouvée pour le résident ${userId}`);
         return res.status(404).json({ message: 'Maison non trouvée' });
       }
       maisonId = user.maisonId;
+      console.log(`✅ [RESIDENTS] Maison trouvée pour le résident: ${maisonId}`);
     } else {
       return res.status(403).json({ message: 'Rôle non autorisé' });
     }
 
-    // Récupérer tous les résidents de cette maison
+    // Récupérer tous les résidents de cette maison spécifique
     const residents = await User.find({
       maisonId: maisonId,
       role: 'resident'
     }).select('-motDePasse -firstLogin -createdAt -updatedAt -__v');
 
+    console.log(`✅ [RESIDENTS] ${residents.length} résidents trouvés pour la maison ${maisonId}`);
+    console.log(`📋 [RESIDENTS] Résidents:`, residents.map(r => ({ id: r._id, nom: r.nom, prenom: r.prenom, email: r.email })));
+
     res.json(residents);
   } catch (error) {
-    console.error('Erreur lors de la récupération des résidents:', error);
+    console.error('❌ [RESIDENTS] Erreur lors de la récupération des résidents:', error);
     res.status(500).json({ message: 'Erreur serveur' });
   }
 };
