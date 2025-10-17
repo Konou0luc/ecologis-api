@@ -4,7 +4,10 @@ const residentsController = require('../controllers/residentsController');
 const { authenticateToken, requireProprietaire } = require('../middlewares/auth');
 const { checkSubscription, checkResidentQuota } = require('../middlewares/checkSubscription');
 
-// Toutes les routes nécessitent une authentification et un rôle propriétaire
+// Route accessible à tous les utilisateurs authentifiés (résidents et propriétaires)
+router.get('/my-house', authenticateToken, residentsController.getMyHouseResidents);
+
+// Toutes les routes suivantes nécessitent une authentification et un rôle propriétaire
 router.use(authenticateToken);
 router.use(requireProprietaire);
 router.use(checkSubscription);

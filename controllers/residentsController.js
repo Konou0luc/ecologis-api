@@ -5,6 +5,45 @@ const { generateTemporaryPassword } = require('../utils/passwordUtils');
 const { sendWhatsAppCredentials } = require('../utils/whatsappUtils');
 const notifications = require('../utils/notifications');
 
+// Obtenir les résidents de la maison de l'utilisateur connecté
+const getMyHouseResidents = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const userRole = req.user.role;
+
+    // Trouver la maison de l'utilisateur
+    let maisonId;
+    if (userRole === 'proprietaire') {
+      // Pour les propriétaires, prendre la première maison
+      const maison = await Maison.findOne({ proprietaireId: userId });
+      if (!maison) {
+        return res.status(404).json({ message: 'Maison non trouvée' });
+      }
+      maisonId = maison._id;
+    } else if (userRole === 'resident') {
+      // Pour les résidents, prendre leur maisonId
+      const user = await User.findById(userId);
+      if (!user || !user.maisonId) {
+        return res.status(404).json({ message: 'Maison non trouvée' });
+      }
+      maisonId = user.maisonId;
+    } else {
+      return res.status(403).json({ message: 'Rôle non autorisé' });
+    }
+
+    // Récupérer tous les résidents de cette maison
+    const residents = await User.find({
+      maisonId: maisonId,
+      role: 'resident'
+    }).select('-motDePasse -firstLogin -createdAt -updatedAt -__v');
+
+    res.json(residents);
+  } catch (error) {
+    console.error('Erreur lors de la récupération des résidents:', error);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+};
+
 // Ajouter un résident
 const addResident = async (req, res) => {
   try {
@@ -237,5 +276,6 @@ module.exports = {
   getResidents,
   getResident,
   deleteResident,
-  updateResident
+  updateResident,
+  getMyHouseResidents
 };
