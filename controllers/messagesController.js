@@ -98,17 +98,20 @@ exports.proxyFile = async (req, res) => {
     const fetch = require('node-fetch');
     let response = await fetch(target);
 
-    // Si échec d'accès direct (401/403/404), tenter URL signée Cloudinary
+    // Si échec d'accès direct (401/403/404), tenter variantes + URL signées Cloudinary
     if (![200].includes(response.status)) {
-      // Essayer d'extraire public_id et format
-      // URL forme: https://res.cloudinary.com/<cloud>/[resource]/upload/.../<public_id>.<ext>
       try {
         const u = new URL(url);
-        const parts = u.pathname.split('/');
-        // public_id est après 'upload/'
-        const uploadIndex = parts.findIndex((p) => p === 'upload');
-        if (uploadIndex !== -1 && uploadIndex + 1 < parts.length) {
-          const publicWithExt = parts.slice(uploadIndex + 1).join('/');
+        const pathParts = u.pathname.split('/');
+        const resourceTypeInUrl = pathParts.includes('image') ? 'image' : (pathParts.includes('raw') ? 'raw' : null);
+        const uploadIndex = pathParts.findIndex((p) => p === 'upload');
+        if (uploadIndex !== -1 && uploadIndex + 1 < pathParts.length) {
+          let afterUpload = pathParts.slice(uploadIndex + 1); // e.g. ['v1760...', 'ecologis', 'messages', 'file.pdf']
+          // Retirer la version si présente (v123456789)
+          if (afterUpload.length && /^v\d+$/.test(afterUpload[0])) {
+            afterUpload = afterUpload.slice(1);
+          }
+          const publicWithExt = afterUpload.join('/');
           const last = publicWithExt.split('/').pop();
           const hasDot = last && last.includes('.');
           const ext = hasDot ? last.split('.').pop() : undefined;
@@ -116,30 +119,54 @@ exports.proxyFile = async (req, res) => {
             ? publicWithExt.substring(0, publicWithExt.lastIndexOf('.'))
             : publicWithExt;
 
-          // Générer une URL signée téléchargeable (expirant)
-          // Utiliser raw par défaut pour PDF/doc/audio
-          const isPdf = (ext || '').toLowerCase() === 'pdf';
-          const resourceType = isPdf ? 'raw' : 'image';
-          const expiresAt = Math.floor(Date.now() / 1000) + 5 * 60; // 5 minutes
-
-          // Pour les ressources privées/authentifiées, private_download_url est recommandé
-          // On l'emploie quelle que soit la config actuelle si l'accès public échoue
-          const signedUrl = cloudinary.utils.private_download_url(
-            publicId,
-            ext || 'bin',
-            {
-              resource_type: resourceType,
-              attachment: true,
-              expires_at: expiresAt,
+          const isPdf = ((ext || '').toLowerCase() === 'pdf');
+          // 1) Essayer l'autre resource_type (toggle image/raw) sur l'URL directe
+          if (isPdf) {
+            const toggled = url.includes('/image/upload/')
+              ? url.replace('/image/upload/', '/raw/upload/')
+              : url.replace('/raw/upload/', '/image/upload/');
+            const r2 = await fetch(toggled);
+            if (r2.ok) {
+              response = r2;
             }
-          );
+          }
 
-          if (signedUrl) {
-            response = await fetch(signedUrl);
+          if (!response.ok) {
+            // 2) Générer une URL signée via cloudinary.url (sign_url)
+            const primaryResource = isPdf ? 'raw' : (resourceTypeInUrl || 'image');
+            const altResource = primaryResource === 'raw' ? 'image' : 'raw';
+
+            // Essai URL signée principale
+            const signedUrlPrimary = cloudinary.url(publicId, {
+              resource_type: primaryResource,
+              type: 'upload',
+              secure: true,
+              sign_url: true,
+              flags: 'attachment',
+              format: ext || undefined,
+            });
+            let r3 = await fetch(signedUrlPrimary);
+            if (r3.ok) {
+              response = r3;
+            } else {
+              // Essai URL signée alternative (toggle resource_type)
+              const signedUrlAlt = cloudinary.url(publicId, {
+                resource_type: altResource,
+                type: 'upload',
+                secure: true,
+                sign_url: true,
+                flags: 'attachment',
+                format: ext || undefined,
+              });
+              r3 = await fetch(signedUrlAlt);
+              if (r3.ok) {
+                response = r3;
+              }
+            }
           }
         }
       } catch (e) {
-        // On ignore et on retombera sur l'erreur initiale
+        // Ignorer, on tombera sur l'erreur initiale
       }
     }
 
