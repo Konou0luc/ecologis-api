@@ -13,6 +13,12 @@ const getMyHouseResidents = async (req, res) => {
 
     console.log(`🔍 [RESIDENTS] getMyHouseResidents appelé pour userId: ${userId}, role: ${userRole}`);
 
+    // Vérifier que l'utilisateur existe
+    if (!userId) {
+      console.log(`❌ [RESIDENTS] userId manquant`);
+      return res.status(400).json({ message: 'Utilisateur non identifié' });
+    }
+
     // Trouver la maison de l'utilisateur
     let maisonId;
     if (userRole === 'proprietaire') {
@@ -20,7 +26,7 @@ const getMyHouseResidents = async (req, res) => {
       const maison = await Maison.findOne({ proprietaireId: userId });
       if (!maison) {
         console.log(`❌ [RESIDENTS] Aucune maison trouvée pour le propriétaire ${userId}`);
-        return res.status(404).json({ message: 'Maison non trouvée' });
+        return res.json([]); // Retourner une liste vide au lieu d'une erreur
       }
       maisonId = maison._id;
       console.log(`✅ [RESIDENTS] Maison trouvée pour le propriétaire: ${maisonId}`);
@@ -29,11 +35,12 @@ const getMyHouseResidents = async (req, res) => {
       const user = await User.findById(userId);
       if (!user || !user.maisonId) {
         console.log(`❌ [RESIDENTS] Aucune maison trouvée pour le résident ${userId}`);
-        return res.status(404).json({ message: 'Maison non trouvée' });
+        return res.json([]); // Retourner une liste vide au lieu d'une erreur
       }
       maisonId = user.maisonId;
       console.log(`✅ [RESIDENTS] Maison trouvée pour le résident: ${maisonId}`);
     } else {
+      console.log(`❌ [RESIDENTS] Rôle non autorisé: ${userRole}`);
       return res.status(403).json({ message: 'Rôle non autorisé' });
     }
 
@@ -50,7 +57,8 @@ const getMyHouseResidents = async (req, res) => {
     res.json(residents);
   } catch (error) {
     console.error('❌ [RESIDENTS] Erreur lors de la récupération des résidents:', error);
-    res.status(500).json({ message: 'Erreur serveur' });
+    console.error('❌ [RESIDENTS] Stack trace:', error.stack);
+    res.status(500).json({ message: 'Erreur serveur', error: error.message });
   }
 };
 
