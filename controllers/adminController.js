@@ -418,6 +418,91 @@ const deleteMaison = async (req, res) => {
   }
 };
 
+// Fonction pour obtenir tous les résidents avec pagination et filtres
+const getResidents = async (req, res) => {
+  try {
+    const { page = 1, limit = 10, search, statut } = req.query;
+    const query = { role: 'resident' };
+
+    if (search) {
+      query.$or = [
+        { nom: { $regex: search, $options: 'i' } },
+        { prenom: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    const options = {
+      page: parseInt(page),
+      limit: parseInt(limit),
+      sort: { createdAt: -1 },
+      select: '-motDePasse -refreshToken', // Exclure les champs sensibles
+    };
+
+    const residents = await User.paginate(query, options);
+
+    // Enrichir avec les données des maisons et consommations
+    const enrichedResidents = await Promise.all(
+      residents.docs.map(async (resident) => {
+        // Trouver la maison du résident
+        const maison = await Maison.findOne({ 
+          listeResidents: resident._id 
+        }).select('nomMaison adresse');
+
+        // Calculer les statistiques
+        const consommations = await Consommation.find({ 
+          residentId: resident._id 
+        });
+        
+        const totalKwh = consommations.reduce((sum, cons) => sum + (cons.kwh || 0), 0);
+        const totalFactures = await Facture.countDocuments({ 
+          residentId: resident._id 
+        });
+
+        return {
+          ...resident.toObject(),
+          maison: maison,
+          statistiques: {
+            totalKwh,
+            totalFactures
+          }
+        };
+      })
+    );
+
+    res.json({
+      residents: enrichedResidents,
+      pagination: {
+        total: residents.totalDocs,
+        limit: residents.limit,
+        page: residents.page,
+        pages: residents.totalPages,
+      },
+    });
+
+  } catch (error) {
+    console.error('Erreur lors de la récupération des résidents:', error);
+    res.status(500).json({ message: 'Erreur lors de la récupération des résidents' });
+  }
+};
+
+// Fonction pour supprimer un résident
+const deleteResident = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const resident = await User.findByIdAndDelete(id);
+
+    if (!resident) {
+      return res.status(404).json({ message: 'Résident non trouvé' });
+    }
+
+    res.json({ message: 'Résident supprimé avec succès' });
+  } catch (error) {
+    console.error('Erreur lors de la suppression du résident:', error);
+    res.status(500).json({ message: 'Erreur lors de la suppression du résident' });
+  }
+};
+
 module.exports = {
   getDashboardStats,
   getAllUsers,
@@ -426,5 +511,7 @@ module.exports = {
   getAllFactures,
   getAllAbonnements,
   deleteUser,
-  deleteMaison
+  deleteMaison,
+  getResidents,
+  deleteResident
 };

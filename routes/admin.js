@@ -27,4 +27,8 @@ router.get('/bills', adminController.getAllFactures);
 // Gestion des abonnements
 router.get('/subscriptions', adminController.getAllAbonnements);
 
+// Gestion des résidents
+router.get('/residents', adminController.getResidents);
+router.delete('/residents/:id', adminController.deleteResident);
+
 module.exports = router;
