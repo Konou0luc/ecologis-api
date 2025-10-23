@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
+const mongoosePaginate = require("mongoose-paginate-v2");
 
 const userSchema = new mongoose.Schema(
   {
@@ -99,5 +100,8 @@ userSchema.set("toJSON", {
     return ret;
   },
 });
+
+// Ajouter le plugin de pagination
+userSchema.plugin(mongoosePaginate);
 
 module.exports = mongoose.model("User", userSchema);
