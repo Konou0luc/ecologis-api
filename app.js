@@ -38,6 +38,7 @@ app.use('/factures', require('./routes/factures'));
 app.use('/abonnements', require('./routes/abonnements'));
 app.use('/maisons', require('./routes/maisons'));
 app.use('/messages', require('./routes/messages'));
+app.use('/admin', require('./routes/admin'));
 
 // Exposer config pour le frontend
 app.get('/config', (req, res) => {
