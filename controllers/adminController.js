@@ -439,11 +439,19 @@ const getResidents = async (req, res) => {
       select: '-motDePasse -refreshToken', // Exclure les champs sensibles
     };
 
-    const residents = await User.paginate(query, options);
+    // Pagination manuelle en attendant le déploiement
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const residents = await User.find(query)
+      .select('-motDePasse -refreshToken')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+    
+    const total = await User.countDocuments(query);
 
     // Enrichir avec les données des maisons et consommations
     const enrichedResidents = await Promise.all(
-      residents.docs.map(async (resident) => {
+      residents.map(async (resident) => {
         // Trouver la maison du résident
         const maison = await Maison.findOne({ 
           listeResidents: resident._id 
@@ -473,10 +481,10 @@ const getResidents = async (req, res) => {
     res.json({
       residents: enrichedResidents,
       pagination: {
-        total: residents.totalDocs,
-        limit: residents.limit,
-        page: residents.page,
-        pages: residents.totalPages,
+        total: total,
+        limit: parseInt(limit),
+        page: parseInt(page),
+        pages: Math.ceil(total / parseInt(limit)),
       },
     });
 
