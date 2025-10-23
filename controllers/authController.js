@@ -23,7 +23,7 @@ const generateTokens = (userId) => {
 // Enregistrement d'un propriétaire
 const register = async (req, res) => {
   try {
-    const { nom, prenom, email, telephone, motDePasse } = req.body;
+    const { nom, prenom, email, telephone, motDePasse, role } = req.body;
 
     // Vérifier si l'email existe déjà
     const existingUser = await User.findOne({ email });
@@ -31,28 +31,41 @@ const register = async (req, res) => {
       return res.status(400).json({ message: 'Cet email est déjà utilisé' });
     }
 
-    // Créer le propriétaire
-    const proprietaire = new User({
+    // Vérifier si c'est une demande de création d'admin
+    const isAdminRequest = role === 'admin';
+    
+    // Si c'est une demande d'admin, vérifier s'il n'y a pas déjà un admin
+    if (isAdminRequest) {
+      const existingAdmin = await User.findOne({ role: 'admin' });
+      if (existingAdmin) {
+        return res.status(400).json({ message: 'Un administrateur existe déjà' });
+      }
+    }
+
+    // Créer l'utilisateur
+    const user = new User({
       nom,
       prenom,
       email,
       telephone,
       motDePasse,
-      role: 'proprietaire'
+      role: isAdminRequest ? 'admin' : 'proprietaire'
     });
 
-    await proprietaire.save();
+    await user.save();
 
     // Générer les tokens
-    const { accessToken, refreshToken } = generateTokens(proprietaire._id);
+    const { accessToken, refreshToken } = generateTokens(user._id);
 
     // Sauvegarder le refresh token
-    proprietaire.refreshToken = refreshToken;
-    await proprietaire.save();
+    user.refreshToken = refreshToken;
+    await user.save();
 
+    const message = isAdminRequest ? 'Compte administrateur créé avec succès' : 'Compte propriétaire créé avec succès';
+    
     res.status(201).json({
-      message: 'Compte propriétaire créé avec succès',
-      user: proprietaire,
+      message,
+      user,
       accessToken,
       refreshToken
     });
