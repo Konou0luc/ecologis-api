@@ -3,6 +3,9 @@ const Maison = require('../models/Maison');
 const Consommation = require('../models/Consommation');
 const Facture = require('../models/Facture');
 const Abonnement = require('../models/Abonnement');
+const Message = require('../models/Message');
+const Notification = require('../models/Notification');
+const Log = require('../models/Log');
 
 // Dashboard - Statistiques générales
 const getDashboardStats = async (req, res) => {
@@ -511,6 +514,133 @@ const deleteResident = async (req, res) => {
   }
 };
 
+// Messages
+const getMessages = async (req, res) => {
+  try {
+    const { page = 1, limit = 10, search, type, status } = req.query;
+    const skip = (page - 1) * limit;
+
+    let query = {};
+    if (search) {
+      query.$or = [
+        { sujet: { $regex: search, $options: 'i' } },
+        { contenu: { $regex: search, $options: 'i' } },
+        { 'destinataire.nom': { $regex: search, $options: 'i' } },
+        { 'destinataire.prenom': { $regex: search, $options: 'i' } }
+      ];
+    }
+    if (type) query.type = type;
+    if (status) query.statut = status;
+
+    const messages = await Message.find(query)
+      .populate('destinataire', 'nom prenom email')
+      .populate('expediteur', 'nom prenom email')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    const total = await Message.countDocuments(query);
+
+    res.json({
+      messages,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    console.error('Erreur lors de la récupération des messages:', error);
+    res.status(500).json({ message: 'Erreur lors de la récupération des messages' });
+  }
+};
+
+// Notifications
+const getNotifications = async (req, res) => {
+  try {
+    const { page = 1, limit = 10, search, type, status } = req.query;
+    const skip = (page - 1) * limit;
+
+    let query = {};
+    if (search) {
+      query.$or = [
+        { titre: { $regex: search, $options: 'i' } },
+        { contenu: { $regex: search, $options: 'i' } },
+        { 'destinataire.nom': { $regex: search, $options: 'i' } },
+        { 'destinataire.prenom': { $regex: search, $options: 'i' } }
+      ];
+    }
+    if (type) query.type = type;
+    if (status) query.statut = status;
+
+    const notifications = await Notification.find(query)
+      .populate('destinataire', 'nom prenom email')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    const total = await Notification.countDocuments(query);
+
+    res.json({
+      notifications,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    console.error('Erreur lors de la récupération des notifications:', error);
+    res.status(500).json({ message: 'Erreur lors de la récupération des notifications' });
+  }
+};
+
+// Logs
+const getLogs = async (req, res) => {
+  try {
+    const { page = 1, limit = 10, search, level, dateFrom, dateTo } = req.query;
+    const skip = (page - 1) * limit;
+
+    let query = {};
+    if (search) {
+      query.$or = [
+        { message: { $regex: search, $options: 'i' } },
+        { module: { $regex: search, $options: 'i' } },
+        { action: { $regex: search, $options: 'i' } }
+      ];
+    }
+    if (level) query.level = level;
+    if (dateFrom || dateTo) {
+      query.createdAt = {};
+      if (dateFrom) query.createdAt.$gte = new Date(dateFrom);
+      if (dateTo) query.createdAt.$lte = new Date(dateTo);
+    }
+
+    const logs = await Log.find(query)
+      .populate('user', 'nom prenom email')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    const total = await Log.countDocuments(query);
+
+    res.json({
+      logs,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    console.error('Erreur lors de la récupération des logs:', error);
+    res.status(500).json({ message: 'Erreur lors de la récupération des logs' });
+  }
+};
+
 module.exports = {
   getDashboardStats,
   getAllUsers,
@@ -521,5 +651,8 @@ module.exports = {
   deleteUser,
   deleteMaison,
   getResidents,
-  deleteResident
+  deleteResident,
+  getMessages,
+  getNotifications,
+  getLogs
 };

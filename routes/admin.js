@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const adminController = require('../controllers/adminController');
+const systemController = require('../controllers/systemController');
 const { authenticateToken, requireAdmin } = require('../middlewares/auth');
 
 // Toutes les routes admin nécessitent une authentification et le rôle admin
@@ -30,5 +31,18 @@ router.get('/subscriptions', adminController.getAllAbonnements);
 // Gestion des résidents
 router.get('/residents', adminController.getResidents);
 router.delete('/residents/:id', adminController.deleteResident);
+
+// Gestion des messages
+router.get('/messages', adminController.getMessages);
+
+// Gestion des notifications
+router.get('/notifications', adminController.getNotifications);
+
+// Gestion des logs
+router.get('/logs', adminController.getLogs);
+
+// Informations système
+router.get('/system/status', systemController.getSystemStatus);
+router.get('/system/info', systemController.getSystemInfo);
 
 module.exports = router;

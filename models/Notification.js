@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
-const messageSchema = new mongoose.Schema({
-  sujet: {
+const notificationSchema = new mongoose.Schema({
+  titre: {
     type: String,
     required: true,
     trim: true
@@ -12,18 +12,13 @@ const messageSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['email', 'sms', 'push', 'chat'],
-    default: 'email'
+    enum: ['system', 'alert', 'info', 'warning', 'success'],
+    default: 'info'
   },
   statut: {
     type: String,
     enum: ['envoye', 'en_attente', 'echec', 'lu'],
     default: 'en_attente'
-  },
-  expediteur: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
   },
   destinataire: {
     type: mongoose.Schema.Types.ObjectId,
@@ -37,6 +32,11 @@ const messageSchema = new mongoose.Schema({
   dateLecture: {
     type: Date
   },
+  priorite: {
+    type: String,
+    enum: ['basse', 'normale', 'haute', 'critique'],
+    default: 'normale'
+  },
   metadata: {
     type: mongoose.Schema.Types.Mixed,
     default: {}
@@ -46,9 +46,10 @@ const messageSchema = new mongoose.Schema({
 });
 
 // Index pour améliorer les performances
-messageSchema.index({ expediteur: 1, createdAt: -1 });
-messageSchema.index({ destinataire: 1, createdAt: -1 });
-messageSchema.index({ statut: 1 });
-messageSchema.index({ type: 1 });
+notificationSchema.index({ destinataire: 1, createdAt: -1 });
+notificationSchema.index({ statut: 1 });
+notificationSchema.index({ type: 1 });
+notificationSchema.index({ priorite: 1 });
 
-module.exports = mongoose.model('Message', messageSchema);
+module.exports = mongoose.model('Notification', notificationSchema);
+
