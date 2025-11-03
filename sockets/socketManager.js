@@ -88,13 +88,24 @@ const socketManager = (io) => {
           return;
         }
 
-        // Créer le message
+        // Générer un sujet à partir du contenu
+        const sujet = contenu.trim().length > 50 
+          ? contenu.trim().substring(0, 50) + '...' 
+          : contenu.trim();
+
+        // Créer le message avec les champs du schéma MongoDB
         const message = new Message({
-          senderId: socket.userId,
-          receiverId,
-          maisonId,
-          contenu,
-          type: 'text'
+          expediteur: socket.userId,
+          destinataire: receiverId,
+          sujet: sujet,
+          contenu: contenu.trim(),
+          type: 'chat',
+          statut: 'envoye',
+          dateEnvoi: new Date(),
+          metadata: {
+            maisonId: maisonId,
+            receiverId: receiverId, // Garder pour compatibilité
+          },
         });
 
         await message.save();
@@ -159,12 +170,27 @@ const socketManager = (io) => {
           return;
         }
 
-        // Créer le message
+        // Pour les messages de groupe, destinataire = expediteur (tous les membres voient)
+        const destinataireId = socket.userId;
+
+        // Générer un sujet à partir du contenu
+        const sujet = contenu.trim().length > 50 
+          ? contenu.trim().substring(0, 50) + '...' 
+          : contenu.trim();
+
+        // Créer le message avec les champs du schéma MongoDB
         const message = new Message({
-          senderId: socket.userId,
-          maisonId,
-          contenu,
-          type
+          expediteur: socket.userId,
+          destinataire: destinataireId,
+          sujet: sujet,
+          contenu: contenu.trim(),
+          type: 'chat', // Toujours 'chat' pour l'enum
+          statut: 'envoye',
+          dateEnvoi: new Date(),
+          metadata: {
+            maisonId: maisonId,
+            receiverId: null, // Messages de groupe
+          },
         });
 
         await message.save();

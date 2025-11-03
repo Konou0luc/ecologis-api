@@ -20,7 +20,7 @@ const envoyer = async (residentId, message) => {
 
     const payload = {
       notification: {
-        title: 'Ecologis',
+        title: 'Ecopower',
         body: message
       },
       data: {

@@ -1,10 +1,10 @@
-# 📚 Documentation API Ecologis - Version Production
+# 📚 Documentation API Ecopower - Version Production
 
 ## 🎯 Vue d'ensemble
 
-L'API Ecologis est une solution de gestion de consommation électrique qui permet aux propriétaires de gérer leurs maisons, résidents et factures d'électricité. Elle gère automatiquement le calcul des factures basé sur les relevés de consommation et les tarifs personnalisés.
+L'API Ecopower est une solution de gestion de consommation électrique qui permet aux propriétaires de gérer leurs maisons, résidents et factures d'électricité. Elle gère automatiquement le calcul des factures basé sur les relevés de consommation et les tarifs personnalisés.
 
-**🌐 Base URL:** `https://ecologis-api.vercel.app`
+**🌐 Base URL:** `https://ecopower-api.vercel.app`
 
 **📱 Statut:** Production - Déployé sur Render
 
@@ -34,7 +34,7 @@ L'API Ecologis est une solution de gestion de consommation électrique qui perme
 #### POST `/auth/register`
 **Créer un compte propriétaire**
 
-**URL complète:** `https://ecologis-api.vercel.app/auth/register`
+**URL complète:** `https://ecopower-api.vercel.app/auth/register`
 
 **Body JSON:**
 ```json
@@ -49,7 +49,7 @@ L'API Ecologis est une solution de gestion de consommation électrique qui perme
 
 **Exemple cURL:**
 ```bash
-curl -X POST https://ecologis-api.vercel.app/auth/register \
+curl -X POST https://ecopower-api.vercel.app/auth/register \
   -H "Content-Type: application/json" \
   -d '{
     "nom": "Doe",

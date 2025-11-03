@@ -81,7 +81,7 @@ function mimeToResourceType(mime) {
 }
 
 // Upload à partir d'un buffer vers Cloudinary
-const uploadBufferToCloudinary = async (file, folder = 'ecologis/messages') => {
+const uploadBufferToCloudinary = async (file, folder = 'ecopower/messages') => {
   try {
     const dataUri = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
     const result = await cloudinary.uploader.upload(dataUri, {
@@ -102,7 +102,7 @@ const uploadBufferToCloudinary = async (file, folder = 'ecologis/messages') => {
 };
 
 // (Optionnel) Upload depuis un chemin de fichier, utile en dev local
-const uploadToCloudinary = async (filePath, folder = 'ecologis/messages', mimetype) => {
+const uploadToCloudinary = async (filePath, folder = 'ecopower/messages', mimetype) => {
   try {
     const result = await cloudinary.uploader.upload(filePath, {
       folder,

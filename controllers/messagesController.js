@@ -27,28 +27,42 @@ exports.createFileMessage = async (req, res) => {
     // Upload vers Cloudinary depuis le buffer (compat. serverless)
     const cloudinaryResult = await uploadBufferToCloudinary(req.file);
 
-    // Déterminer le type de message selon le type de fichier
-    let messageType = 'file';
-    if (req.file.mimetype.startsWith('image/')) {
-      messageType = 'image';
-    } else if (req.file.mimetype.startsWith('video/')) {
-      messageType = 'video';
-    } else if (req.file.mimetype.startsWith('audio/')) {
-      messageType = 'audio';
-    }
+    // Pour les messages de groupe (receiverId null/vide), utiliser senderId comme destinataire par défaut
+    const destinataireId = receiverId && receiverId.trim() !== '' 
+      ? receiverId 
+      : senderId;
 
-    // Créer le message avec fichier
+    // Générer un sujet à partir du nom du fichier
+    const sujet = req.file.originalname;
+
+    // Déterminer le type réel du fichier pour les metadata (image, video, audio, file)
+    const fileType = req.file.mimetype.startsWith('image/') 
+      ? 'image' 
+      : req.file.mimetype.startsWith('video/') 
+        ? 'video' 
+        : req.file.mimetype.startsWith('audio/') 
+          ? 'audio' 
+          : 'file';
+
+    // Pour l'enum MongoDB, toujours utiliser 'chat' pour les messages de chat
+    const messageType = 'chat';
+
+    // Créer le message avec fichier en utilisant les champs du schéma MongoDB
     const message = new Message({
-      senderId,
-      receiverId: receiverId || null,
-      maisonId,
+      expediteur: senderId,
+      destinataire: destinataireId,
+      sujet: sujet,
       contenu: contenu || req.file.originalname,
-      type: messageType,
+      type: messageType, // 'chat' pour l'enum
+      statut: 'envoye',
       dateEnvoi: new Date(),
       metadata: {
+        maisonId: maisonId,
+        receiverId: receiverId || null, // Garder pour compatibilité
+        fileType: fileType, // Type réel du fichier
         fileName: req.file.originalname,
         fileSize: req.file.size,
-        fileType: req.file.mimetype,
+        fileMimeType: req.file.mimetype,
         fileUrl: cloudinaryResult.secure_url,
         thumbnailUrl: cloudinaryResult.format === 'jpg' || cloudinaryResult.format === 'png' 
           ? cloudinaryResult.secure_url 
@@ -60,12 +74,13 @@ exports.createFileMessage = async (req, res) => {
 
     console.log('✅ [API] Message avec fichier créé:', {
       id: message._id,
-      senderId: message.senderId,
-      receiverId: message.receiverId,
-      maisonId: message.maisonId,
+      expediteur: message.expediteur,
+      destinataire: message.destinataire,
+      sujet: message.sujet,
       type: message.type,
       fileName: message.metadata.fileName,
-      fileUrl: message.metadata.fileUrl
+      fileUrl: message.metadata.fileUrl,
+      maisonId: maisonId,
     });
 
     res.status(201).json({
@@ -106,7 +121,7 @@ exports.proxyFile = async (req, res) => {
         const resourceTypeInUrl = pathParts.includes('image') ? 'image' : (pathParts.includes('raw') ? 'raw' : null);
         const uploadIndex = pathParts.findIndex((p) => p === 'upload');
         if (uploadIndex !== -1 && uploadIndex + 1 < pathParts.length) {
-          let afterUpload = pathParts.slice(uploadIndex + 1); // e.g. ['v1760...', 'ecologis', 'messages', 'file.pdf']
+          let afterUpload = pathParts.slice(uploadIndex + 1); // e.g. ['v1760...', 'ecopower', 'messages', 'file.pdf']
           // Retirer la version si présente (v123456789)
           if (afterUpload.length && /^v\d+$/.test(afterUpload[0])) {
             afterUpload = afterUpload.slice(1);
@@ -204,24 +219,42 @@ exports.createMessage = async (req, res) => {
       return res.status(400).json({ message: 'L\'ID de la maison est requis' });
     }
 
-    // Créer le message
+    // Pour les messages de groupe (receiverId null/vide), utiliser senderId comme destinataire par défaut
+    // ou rendre destinataire optionnel. Ici, on utilise senderId comme fallback.
+    const destinataireId = receiverId && receiverId.trim() !== '' 
+      ? receiverId 
+      : senderId; // Pour messages de groupe, destinataire = expéditeur (tous les membres voient le message)
+
+    // Générer un sujet à partir du contenu (premiers 50 caractères)
+    const sujet = contenu.trim().length > 50 
+      ? contenu.trim().substring(0, 50) + '...' 
+      : contenu.trim();
+
+    // Créer le message avec les champs du schéma MongoDB
     const message = new Message({
-      senderId,
-      receiverId: receiverId || null, // null pour les messages de groupe
-      maisonId,
+      expediteur: senderId,
+      destinataire: destinataireId,
+      sujet: sujet,
       contenu: contenu.trim(),
-      type: 'text',
+      type: 'chat', // Utiliser 'chat' au lieu de 'text' car c'est dans l'enum
+      statut: 'envoye',
       dateEnvoi: new Date(),
+      metadata: {
+        maisonId: maisonId,
+        receiverId: receiverId || null, // Garder pour compatibilité
+      },
     });
 
     await message.save();
 
     console.log('✅ [API] Message créé:', {
       id: message._id,
-      senderId: message.senderId,
-      receiverId: message.receiverId,
-      maisonId: message.maisonId,
+      expediteur: message.expediteur,
+      destinataire: message.destinataire,
+      sujet: message.sujet,
+      type: message.type,
       contenu: message.contenu.substring(0, 50) + '...',
+      maisonId: maisonId,
     });
 
     res.status(201).json({
@@ -242,8 +275,8 @@ exports.getPrivateHistory = async (req, res) => {
 
     const messages = await Message.find({
       $or: [
-        { senderId: myId, receiverId: otherUserId },
-        { senderId: otherUserId, receiverId: myId },
+        { expediteur: myId, destinataire: otherUserId },
+        { expediteur: otherUserId, destinataire: myId },
       ],
     })
       .sort({ dateEnvoi: 1 })
@@ -260,7 +293,12 @@ exports.getPrivateHistory = async (req, res) => {
 exports.getHouseHistory = async (req, res) => {
   try {
     const maisonId = req.params.maisonId;
-    const messages = await Message.find({ maisonId, receiverId: null })
+    // Pour les messages de groupe, destinataire = expediteur (tous les membres voient)
+    // On filtre par maisonId dans metadata
+    const messages = await Message.find({ 
+      'metadata.maisonId': maisonId,
+      expediteur: { $ne: null }, // S'assurer qu'il y a un expéditeur
+    })
       .sort({ dateEnvoi: 1 })
       .lean();
     res.json({ messages });

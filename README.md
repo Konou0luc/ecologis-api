@@ -1,6 +1,6 @@
-# 🏠 API Ecologis - Gestion de Consommation Électrique
+# 🏠 API Ecopower - Gestion de Consommation Électrique
 
-API backend complète pour l'application Ecologis, permettant la gestion de la consommation d'électricité dans les maisons de location via des "additionneuses".
+API backend complète pour l'application Ecopower, permettant la gestion de la consommation d'électricité dans les maisons de location via des "additionneuses".
 
 ## 📋 Table des matières
 
@@ -60,7 +60,7 @@ API backend complète pour l'application Ecologis, permettant la gestion de la c
 ## 🏗️ Architecture
 
 ```
-ecologis-api/
+ecopower-api/
 ├── app.js                 # Point d'entrée principal
 ├── models/               # Modèles Mongoose
 │   ├── User.js
@@ -143,7 +143,7 @@ npm start
 
 ```env
 # Configuration MongoDB
-MONGODB_URI=mongodb://localhost:27017/ecologis
+MONGODB_URI=mongodb://localhost:27017/ecopower
 
 # Configuration JWT
 JWT_SECRET=votre_secret_jwt_tres_securise_ici

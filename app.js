@@ -46,7 +46,7 @@ app.get('/config', (req, res) => {
 });
 
 app.get('/', (req, res) => {
-  res.json({ message: 'API Ecologis - Gestion de consommation électrique' });
+  res.json({ message: 'API Ecopower - Gestion de consommation électrique' });
 });
 
 app.use((err, req, res, next) => {

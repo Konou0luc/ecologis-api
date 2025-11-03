@@ -19,7 +19,7 @@ const sendWhatsAppCredentials = async (telephone, email, motDePasse) => {
     //     to: telephone,
     //     type: 'text',
     //     text: {
-    //       body: `Bienvenue sur Ecologis !\n\nVos identifiants de connexion :\nEmail: ${email}\nMot de passe temporaire: ${motDePasse}\n\nVeuillez changer votre mot de passe lors de votre première connexion.`
+    //       body: `Bienvenue sur Ecopower !\n\nVos identifiants de connexion :\nEmail: ${email}\nMot de passe temporaire: ${motDePasse}\n\nVeuillez changer votre mot de passe lors de votre première connexion.`
     //     }
     //   })
     // });
