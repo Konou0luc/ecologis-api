@@ -9,8 +9,8 @@ router.post('/register', authController.register);
 
 // POST /auth/login - Connexion
 router.post('/login', (req, res, next) => {
-  console.log('🔐 [AUTH ROUTE] POST /auth/login appelé');
-  console.log('🔐 [AUTH ROUTE] Body:', req.body);
+  console.log('[AUTH ROUTE] POST /auth/login appele');
+  console.log('[AUTH ROUTE] Body:', req.body);
   next();
 }, authController.login);
 
