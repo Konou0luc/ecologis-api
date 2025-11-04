@@ -11,7 +11,53 @@ const PORT = process.env.PORT || 3000;
 // que express-rate-limit n'échoue pas avec X-Forwarded-For
 app.set('trust proxy', 1);
 
-app.use(cors());
+// Configuration CORS améliorée
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Autoriser les requêtes sans origine (mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
+    
+    // Liste des origines autorisées
+    const allowedOrigins = [
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'http://localhost:5173',
+      'http://localhost:5174',
+      'https://ecologis-web.vercel.app',
+      'https://www.ecologis-web.vercel.app',
+      /^https:\/\/.*\.vercel\.app$/,
+      /^https:\/\/.*\.netlify\.app$/,
+    ];
+    
+    // Vérifier si l'origine est autorisée
+    const isAllowed = allowedOrigins.some(allowed => {
+      if (typeof allowed === 'string') {
+        return origin === allowed;
+      } else if (allowed instanceof RegExp) {
+        return allowed.test(origin);
+      }
+      return false;
+    });
+    
+    if (isAllowed) {
+      callback(null, true);
+    } else {
+      console.log('⚠️ [CORS] Origine bloquée:', origin);
+      callback(null, true); // Autoriser temporairement pour debug
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  maxAge: 86400, // 24 heures
+};
+
+app.use(cors(corsOptions));
+
+// Gérer explicitement les requêtes OPTIONS (preflight)
+app.options('*', cors(corsOptions));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -29,6 +75,20 @@ const residentLimiter = rateLimit({
   message: 'Trop de requêtes, réessayez plus tard',
   standardHeaders: true,
   legacyHeaders: false,
+});
+
+// Gérer les requêtes OPTIONS (preflight CORS) AVANT tout autre middleware
+app.use((req, res, next) => {
+  if (req.method === 'OPTIONS') {
+    console.log('✅ [CORS] Preflight request reçue:', req.path);
+    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Max-Age', '86400');
+    return res.status(200).end();
+  }
+  next();
 });
 
 // Middleware de logging pour debug
