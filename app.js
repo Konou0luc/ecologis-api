@@ -53,17 +53,13 @@ const corsOptions = {
   maxAge: 86400, // 24 heures
 };
 
-app.use(cors(corsOptions));
-
-// Gérer explicitement les requêtes OPTIONS (preflight)
-app.options('*', cors(corsOptions));
-
-// Gérer les requêtes OPTIONS (preflight CORS) AVANT tout autre middleware
-// IMPORTANT: Ce middleware doit être AVANT les rate limiters et express.json()
+// Gérer les requêtes OPTIONS (preflight CORS) EN PREMIER - AVANT tout autre middleware
+// IMPORTANT: Ce middleware doit être AVANT cors(), express.json() et les rate limiters
 app.use((req, res, next) => {
   if (req.method === 'OPTIONS') {
     console.log('[CORS] Preflight request recue:', req.path);
-    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+    const origin = req.headers.origin || '*';
+    res.header('Access-Control-Allow-Origin', origin);
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
     res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
     res.header('Access-Control-Allow-Credentials', 'true');
@@ -72,6 +68,11 @@ app.use((req, res, next) => {
   }
   next();
 });
+
+app.use(cors(corsOptions));
+
+// Gérer explicitement les requêtes OPTIONS (preflight)
+app.options('*', cors(corsOptions));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
