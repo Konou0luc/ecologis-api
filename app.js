@@ -42,7 +42,7 @@ const corsOptions = {
     if (isAllowed) {
       callback(null, true);
     } else {
-      console.log('⚠️ [CORS] Origine bloquée:', origin);
+      console.log('[CORS] Origine bloquee:', origin);
       callback(null, true); // Autoriser temporairement pour debug
     }
   },
@@ -62,7 +62,7 @@ app.options('*', cors(corsOptions));
 // IMPORTANT: Ce middleware doit être AVANT les rate limiters et express.json()
 app.use((req, res, next) => {
   if (req.method === 'OPTIONS') {
-    console.log('✅ [CORS] Preflight request reçue:', req.path);
+    console.log('[CORS] Preflight request recue:', req.path);
     res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
     res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
@@ -95,9 +95,9 @@ const residentLimiter = rateLimit({
 // Middleware de logging pour debug
 app.use((req, res, next) => {
   if (req.path.startsWith('/auth')) {
-    console.log(`📥 [REQUEST] ${req.method} ${req.path}`);
-    console.log(`📥 [REQUEST] Body:`, JSON.stringify(req.body));
-    console.log(`📥 [REQUEST] Headers:`, JSON.stringify(req.headers));
+    console.log(`[REQUEST] ${req.method} ${req.path}`);
+    console.log(`[REQUEST] Body:`, JSON.stringify(req.body));
+    console.log(`[REQUEST] Headers:`, JSON.stringify(req.headers));
   }
   next();
 });
