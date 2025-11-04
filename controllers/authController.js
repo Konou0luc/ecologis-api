@@ -80,11 +80,23 @@ const FREE_MODE = process.env.FREE_MODE === 'true';
 // Connexion
 const login = async (req, res) => {
   try {
+    console.log('🔐 [LOGIN] Tentative de connexion reçue');
+    console.log('🔐 [LOGIN] Body:', JSON.stringify(req.body));
+    console.log('🔐 [LOGIN] Headers:', JSON.stringify(req.headers));
+    
     const { email, motDePasse } = req.body;
+
+    if (!email || !motDePasse) {
+      console.log('❌ [LOGIN] Email ou mot de passe manquant');
+      return res.status(400).json({ message: 'Email et mot de passe requis' });
+    }
 
     // Normaliser les identifiants (évite les erreurs de casse/espaces)
     const normalizedEmail = (email || '').toString().trim().toLowerCase();
     const normalizedPassword = (motDePasse || '').toString().trim();
+
+    console.log('🔐 [LOGIN] Email normalisé:', normalizedEmail);
+    console.log('🔐 [LOGIN] Recherche de l\'utilisateur...');
 
     // Vérifier si l'utilisateur existe (par email normalisé ou téléphone saisi à la place de l'email)
     let user = await User.findOne({ email: normalizedEmail });
@@ -92,15 +104,22 @@ const login = async (req, res) => {
       // Si l'utilisateur a saisi son téléphone à la place de l'email
       user = await User.findOne({ telephone: (email || '').toString().trim() });
     }
+    
     if (!user) {
+      console.log('❌ [LOGIN] Utilisateur non trouvé pour:', normalizedEmail);
       return res.status(401).json({ message: 'Email ou mot de passe incorrect' });
     }
+
+    console.log('✅ [LOGIN] Utilisateur trouvé:', user.email, 'Role:', user.role);
 
     // Vérifier le mot de passe
     const isPasswordValid = await user.comparePassword(normalizedPassword);
     if (!isPasswordValid) {
+      console.log('❌ [LOGIN] Mot de passe incorrect pour:', normalizedEmail);
       return res.status(401).json({ message: 'Email ou mot de passe incorrect' });
     }
+
+    console.log('✅ [LOGIN] Mot de passe valide');
 
     // Générer les tokens
     const { accessToken, refreshToken } = generateTokens(user._id);
@@ -130,6 +149,8 @@ const login = async (req, res) => {
       }
     }
 
+    console.log('✅ [LOGIN] Connexion réussie pour:', user.email, 'Role:', user.role);
+    
     res.json({
       message: 'Connexion réussie',
       user,
@@ -138,8 +159,12 @@ const login = async (req, res) => {
       abonnement
     });
   } catch (error) {
-    console.error('Erreur lors de la connexion:', error);
-    res.status(500).json({ message: 'Erreur lors de la connexion' });
+    console.error('💥 [LOGIN] Erreur lors de la connexion:', error);
+    console.error('💥 [LOGIN] Stack:', error.stack);
+    res.status(500).json({ 
+      message: 'Erreur lors de la connexion',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 };
 

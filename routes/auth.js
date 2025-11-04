@@ -8,7 +8,11 @@ const usersController = require('../controllers/usersController');
 router.post('/register', authController.register);
 
 // POST /auth/login - Connexion
-router.post('/login', authController.login);
+router.post('/login', (req, res, next) => {
+  console.log('🔐 [AUTH ROUTE] POST /auth/login appelé');
+  console.log('🔐 [AUTH ROUTE] Body:', req.body);
+  next();
+}, authController.login);
 
 // POST /auth/refresh - Rafraîchir le token
 router.post('/refresh', authController.refreshToken);

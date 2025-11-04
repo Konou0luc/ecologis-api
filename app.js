@@ -31,6 +31,16 @@ const residentLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Middleware de logging pour debug
+app.use((req, res, next) => {
+  if (req.path.startsWith('/auth')) {
+    console.log(`📥 [REQUEST] ${req.method} ${req.path}`);
+    console.log(`📥 [REQUEST] Body:`, JSON.stringify(req.body));
+    console.log(`📥 [REQUEST] Headers:`, JSON.stringify(req.headers));
+  }
+  next();
+});
+
 app.use('/auth', authLimiter, require('./routes/auth'));
 app.use('/residents', residentLimiter, require('./routes/residents'));
 app.use('/consommations', require('./routes/consommations'));
