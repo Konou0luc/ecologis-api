@@ -2,17 +2,10 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
-
-// Charger dotenv seulement en développement local (pas sur Vercel)
-if (process.env.VERCEL !== '1') {
-  require('dotenv').config();
-}
+require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-
-// CRITIQUE: Désactiver strict routing pour éviter les redirections de trailing slash
-app.set('strict routing', false);
 
 // Requis derrière un proxy (Vercel) pour que req.ip soit correct et
 // que express-rate-limit n'échoue pas avec X-Forwarded-For
@@ -49,7 +42,7 @@ const corsOptions = {
     if (isAllowed) {
       callback(null, true);
     } else {
-      console.log('[CORS] Origine bloquee:', origin);
+      console.log('⚠️ [CORS] Origine bloquée:', origin);
       callback(null, true); // Autoriser temporairement pour debug
     }
   },
@@ -60,62 +53,10 @@ const corsOptions = {
   maxAge: 86400, // 24 heures
 };
 
-// Liste des origines autorisées (réutilisable)
-const getAllowedOrigins = () => [
-  'http://localhost:3000',
-  'http://localhost:3001',
-  'http://localhost:5173',
-  'http://localhost:5174',
-  'https://ecologis-web.vercel.app',
-  'https://www.ecologis-web.vercel.app',
-  'https://ecopower-website.vercel.app',
-  'https://www.ecopower-website.vercel.app',
-];
-
-const isOriginAllowed = (origin) => {
-  if (!origin) return true;
-  const allowedOrigins = getAllowedOrigins();
-  return allowedOrigins.includes(origin) ||
-    /^https:\/\/.*\.vercel\.app$/.test(origin) ||
-    /^https:\/\/.*\.netlify\.app$/.test(origin);
-};
-
-const handleOptionsRequest = (req, res) => {
-  console.log('[CORS] Preflight request recue:', req.method, req.path, 'Origin:', req.headers.origin);
-  
-  if (isOriginAllowed(req.headers.origin)) {
-    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-    res.header('Access-Control-Allow-Credentials', 'true');
-    res.header('Access-Control-Max-Age', '86400');
-    return res.status(200).end();
-  } else {
-    console.log('[CORS] Origine non autorisee pour OPTIONS:', req.headers.origin);
-    res.status(403).end();
-  }
-};
-
-// SOLUTION DEFINITIVE: Créer un handler Express qui répond AVANT toute redirection Vercel
-// Ce middleware DOIT être le PREMIER middleware pour capturer OPTIONS avant toute autre logique
-const corsHandler = (req, res, next) => {
-  // Intercepter OPTIONS immédiatement, SANS appeler next() pour éviter toute redirection
-  if (req.method === 'OPTIONS') {
-    console.log('[CORS] Interception OPTIONS directe:', req.path, 'Origin:', req.headers.origin);
-    handleOptionsRequest(req, res);
-    // CRITIQUE: Ne PAS appeler next() - terminer la réponse ici
-    return;
-  }
-  next();
-};
-
-// Appliquer le handler CORS en PREMIER (avant trust proxy même)
-app.use(corsHandler);
-
-// Gérer aussi avec app.options() pour double sécurité
-app.options('*', handleOptionsRequest);
-
 app.use(cors(corsOptions));
+
+// Gérer explicitement les requêtes OPTIONS (preflight)
+app.options('*', cors(corsOptions));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -136,14 +77,104 @@ const residentLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Gérer les requêtes OPTIONS (preflight CORS) AVANT tout autre middleware
+app.use((req, res, next) => {
+  if (req.method === 'OPTIONS') {
+    console.log('✅ [CORS] Preflight request reçue:', req.path);
+    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Max-Age', '86400');
+    return res.status(200).end();
+  }
+  next();
+});
+
 // Middleware de logging pour debug
 app.use((req, res, next) => {
   if (req.path.startsWith('/auth')) {
-    console.log(`[REQUEST] ${req.method} ${req.path}`);
-    console.log(`[REQUEST] Body:`, JSON.stringify(req.body));
-    console.log(`[REQUEST] Headers:`, JSON.stringify(req.headers));
+    console.log(`📥 [REQUEST] ${req.method} ${req.path}`);
+    console.log(`📥 [REQUEST] Body:`, JSON.stringify(req.body));
+    console.log(`📥 [REQUEST] Headers:`, JSON.stringify(req.headers));
   }
   next();
+});
+
+// Gestion de la connexion MongoDB réutilisable pour Vercel serverless
+let mongoConnection = null;
+
+const connectDB = async () => {
+  try {
+    // Si déjà connecté, réutiliser la connexion
+    if (mongoose.connection.readyState === 1) {
+      console.log('✅ [MongoDB] Connexion existante réutilisée');
+      return mongoose.connection;
+    }
+
+    // Si une connexion est en cours, attendre
+    if (mongoose.connection.readyState === 2) {
+      console.log('⏳ [MongoDB] Connexion en cours, attente...');
+      await new Promise((resolve) => {
+        mongoose.connection.once('connected', resolve);
+        mongoose.connection.once('error', resolve);
+      });
+      if (mongoose.connection.readyState === 1) {
+        return mongoose.connection;
+      }
+    }
+
+    // Nouvelle connexion
+    mongoose.set('strictQuery', false);
+    
+    const options = {
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+    };
+
+    await mongoose.connect(process.env.MONGO_URI, options);
+    console.log('✅ [MongoDB] Connexion établie');
+    
+    mongoose.connection.on('error', (err) => {
+      console.error('❌ [MongoDB] Erreur de connexion:', err);
+    });
+
+    mongoose.connection.on('disconnected', () => {
+      console.log('⚠️ [MongoDB] Déconnecté');
+    });
+
+    return mongoose.connection;
+  } catch (error) {
+    console.error('💥 [MongoDB] Erreur lors de la connexion:', error);
+    // Ne pas faire exit(1) sur Vercel, laisser la fonction se terminer
+    if (!process.env.VERCEL) {
+      process.exit(1);
+    }
+    throw error;
+  }
+};
+
+// Middleware pour s'assurer que MongoDB est connecté avant chaque requête
+// (sauf pour la route principale qui doit fonctionner même sans DB)
+app.use(async (req, res, next) => {
+  // Laisser passer la route principale sans vérifier MongoDB
+  if (req.path === '/' || req.path === '/config') {
+    return next();
+  }
+  
+  try {
+    if (mongoose.connection.readyState !== 1) {
+      await connectDB();
+    }
+    next();
+  } catch (error) {
+    console.error('💥 [MIDDLEWARE] Erreur de connexion MongoDB:', error);
+    res.status(503).json({ 
+      message: 'Service temporairement indisponible - Base de données non accessible',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
 });
 
 app.use('/auth', authLimiter, require('./routes/auth'));
@@ -160,97 +191,99 @@ app.get('/config', (req, res) => {
   res.json({ freeMode: process.env.FREE_MODE === 'true' });
 });
 
-app.get('/', (req, res) => {
-  res.json({ message: 'API Ecopower - Gestion de consommation électrique' });
+// Route principale améliorée avec statut de l'API
+app.get('/', async (req, res) => {
+  try {
+    // Vérifier la connexion MongoDB
+    const mongoStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+    
+    res.json({ 
+      message: '✅ API Ecopower - Gestion de consommation électrique',
+      status: 'online',
+      timestamp: new Date().toISOString(),
+      version: '1.0.0',
+      database: {
+        status: mongoStatus,
+        connected: mongoStatus === 'connected'
+      },
+      environment: process.env.NODE_ENV || 'development',
+      platform: process.env.VERCEL ? 'Vercel Serverless' : 'Traditional Server'
+    });
+  } catch (error) {
+    res.json({
+      message: '✅ API Ecopower - Gestion de consommation électrique',
+      status: 'online',
+      timestamp: new Date().toISOString(),
+      database: {
+        status: 'unknown',
+        connected: false
+      },
+      warning: 'Unable to check database status'
+    });
+  }
 });
 
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ message: 'Erreur interne du serveur' });
+  console.error('💥 [ERROR]', err.stack);
+  res.status(500).json({ 
+    message: 'Erreur interne du serveur',
+    error: process.env.NODE_ENV === 'development' ? err.message : undefined
+  });
 });
 
 app.use((req, res) => {
   res.status(404).json({ message: 'Route non trouvée' });
 });
 
-const connectDB = async () => {
-  try {
-    // Vérifier si déjà connecté (important pour Vercel serverless)
-    if (mongoose.connection.readyState === 1) {
-      console.log('Mongo déjà connecté');
-      return;
-    }
-    
-    mongoose.set('strictQuery', false);
-    const mongoUri = process.env.MONGO_URI;
-    if (!mongoUri) {
-      console.error('MONGO_URI n\'est pas défini');
-      throw new Error('MONGO_URI environment variable is required');
-    }
-    await mongoose.connect(mongoUri);
-    console.log('Mongo connecté');
-  } catch (error) {
-    console.error('Erreur connexion Mongo:', error.message);
-    // Ne pas exit sur Vercel - laisser la fonction serverless gérer
-    if (process.env.VERCEL !== '1') {
+// Détecter si on est sur Vercel
+const isVercel = !!process.env.VERCEL;
+
+// Si on n'est pas sur Vercel, démarrer le serveur traditionnel
+if (!isVercel) {
+  const start = async () => {
+    try {
+      await connectDB();
+
+      const server = app.listen(PORT, () => {
+        console.log(`🚀 Serveur démarré sur le port ${PORT}`);
+      });
+
+      // Socket.io uniquement en mode non-serverless
+      try {
+        const io = require('socket.io')(server, {
+          cors: {
+            origin: "*",
+            methods: ["GET", "POST"]
+          }
+        });
+
+        require('./sockets/socketManager')(io);
+        console.log('✅ Socket.io initialisé');
+      } catch (socketError) {
+        console.warn('⚠️ Socket.io non disponible:', socketError.message);
+      }
+
+      // Cron jobs uniquement en mode non-serverless
+      try {
+        const { initCronJobs } = require('./utils/cronJobs');
+        initCronJobs();
+        console.log('✅ Cron jobs initialisés');
+      } catch (cronError) {
+        console.warn('⚠️ Cron jobs non disponibles:', cronError.message);
+      }
+    } catch (error) {
+      console.error('💥 Erreur lors du démarrage du serveur:', error);
       process.exit(1);
     }
-  }
-};
-
-// Connecter MongoDB de manière lazy (au premier appel sur Vercel)
-let dbConnected = false;
-const ensureDBConnected = async () => {
-  if (!dbConnected) {
-    await connectDB();
-    dbConnected = true;
-  }
-};
-
-// Middleware pour s'assurer que MongoDB est connecté avant chaque requête (Vercel)
-// IMPORTANT: Ce middleware doit être APRÈS le handler CORS mais AVANT les routes
-app.use(async (req, res, next) => {
-  // Ne pas bloquer les requêtes OPTIONS avec MongoDB
-  if (req.method === 'OPTIONS') {
-    return next();
-  }
-  
-  if (process.env.VERCEL === '1' || process.env.VERCEL_ENV) {
-    try {
-      await ensureDBConnected();
-    } catch (error) {
-      console.error('[MONGODB] Erreur connexion:', error.message);
-      // Ne pas bloquer la requête, mais logger l'erreur
-      // Les routes peuvent toujours fonctionner sans DB (pour certaines routes)
-    }
-  }
-  next();
-});
-
-// En développement local, démarrer le serveur normalement
-if (process.env.VERCEL !== '1') {
-  const start = async () => {
-    await connectDB();
-
-    const server = app.listen(PORT, () => {
-      console.log(`Serveur démarré sur le port ${PORT}`);
-    });
-
-    const io = require('socket.io')(server, {
-      cors: {
-        origin: "*",
-        methods: ["GET", "POST"]
-      }
-    });
-
-    require('./sockets/socketManager')(io);
-
-    const { initCronJobs } = require('./utils/cronJobs');
-    initCronJobs();
   };
 
   start();
+} else {
+  // Sur Vercel, initialiser MongoDB au démarrage
+  console.log('🌐 [Vercel] Mode serverless détecté');
+  connectDB().catch((error) => {
+    console.error('💥 [Vercel] Erreur lors de la connexion MongoDB initiale:', error);
+  });
 }
 
-// Pour Vercel serverless, exporter l'app directement
 module.exports = app;
