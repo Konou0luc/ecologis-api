@@ -55,24 +55,75 @@ const corsOptions = {
 
 // Gérer les requêtes OPTIONS (preflight CORS) EN PREMIER - AVANT tout autre middleware
 // IMPORTANT: Ce middleware doit être AVANT cors(), express.json() et les rate limiters
-app.use((req, res, next) => {
-  if (req.method === 'OPTIONS') {
-    console.log('[CORS] Preflight request recue:', req.path);
-    const origin = req.headers.origin || '*';
-    res.header('Access-Control-Allow-Origin', origin);
+// CRITIQUE pour Vercel: Répondre immédiatement aux OPTIONS sans redirection
+// Utiliser app.options() AVANT le middleware use() pour capturer toutes les routes OPTIONS
+app.options('*', (req, res) => {
+  console.log('[CORS] Preflight request recue (app.options):', req.path, 'Origin:', req.headers.origin);
+  
+  // Vérifier si l'origine est autorisée
+  const allowedOrigins = [
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'https://ecologis-web.vercel.app',
+    'https://www.ecologis-web.vercel.app',
+  ];
+  
+  const isAllowedOrigin = !req.headers.origin || 
+    allowedOrigins.includes(req.headers.origin) ||
+    /^https:\/\/.*\.vercel\.app$/.test(req.headers.origin) ||
+    /^https:\/\/.*\.netlify\.app$/.test(req.headers.origin);
+  
+  if (isAllowedOrigin) {
+    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
     res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
     res.header('Access-Control-Allow-Credentials', 'true');
     res.header('Access-Control-Max-Age', '86400');
     return res.status(200).end();
+  } else {
+    console.log('[CORS] Origine non autorisee pour OPTIONS:', req.headers.origin);
+    res.status(403).end();
+  }
+});
+
+// Middleware de secours pour OPTIONS (au cas où app.options() ne capture pas tout)
+app.use((req, res, next) => {
+  if (req.method === 'OPTIONS') {
+    console.log('[CORS] Preflight request recue (middleware):', req.path, 'Origin:', req.headers.origin);
+    
+    const allowedOrigins = [
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'http://localhost:5173',
+      'http://localhost:5174',
+      'https://ecologis-web.vercel.app',
+      'https://www.ecologis-web.vercel.app',
+    ];
+    
+    const isAllowedOrigin = !req.headers.origin || 
+      allowedOrigins.includes(req.headers.origin) ||
+      /^https:\/\/.*\.vercel\.app$/.test(req.headers.origin) ||
+      /^https:\/\/.*\.netlify\.app$/.test(req.headers.origin);
+    
+    if (isAllowedOrigin) {
+      res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+      res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+      res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+      res.header('Access-Control-Allow-Credentials', 'true');
+      res.header('Access-Control-Max-Age', '86400');
+      return res.status(200).end();
+    } else {
+      console.log('[CORS] Origine non autorisee pour OPTIONS:', req.headers.origin);
+      res.status(403).end();
+      return;
+    }
   }
   next();
 });
 
 app.use(cors(corsOptions));
-
-// Gérer explicitement les requêtes OPTIONS (preflight)
-app.options('*', cors(corsOptions));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
