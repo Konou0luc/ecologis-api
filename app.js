@@ -15,6 +15,9 @@ const PORT = process.env.PORT || 3000;
 // que express-rate-limit n'échoue pas avec X-Forwarded-For
 app.set('trust proxy', 1);
 
+// CRITIQUE: Désactiver strict routing pour éviter les redirections de trailing slash
+app.set('strict routing', false);
+
 // Configuration CORS améliorée
 const corsOptions = {
   origin: function (origin, callback) {
@@ -91,19 +94,19 @@ const handleOptionsRequest = (req, res) => {
   }
 };
 
-// Gérer les requêtes OPTIONS (preflight CORS) EN PREMIER - AVANT tout autre middleware
-// IMPORTANT: Ce middleware doit être AVANT cors(), express.json() et les rate limiters
-// CRITIQUE pour Vercel: Répondre immédiatement aux OPTIONS sans redirection
-// Utiliser app.options() AVANT le middleware use() pour capturer toutes les routes OPTIONS
-app.options('*', handleOptionsRequest);
-
-// Middleware de secours pour OPTIONS (au cas où app.options() ne capture pas tout)
+// CRITIQUE: Gérer OPTIONS AVANT tout autre middleware pour éviter les redirections Vercel
+// Le middleware doit être le TRÈS PREMIER pour intercepter OPTIONS avant toute autre logique
 app.use((req, res, next) => {
+  // Intercepter OPTIONS immédiatement, sans passer par d'autres middlewares
   if (req.method === 'OPTIONS') {
+    console.log('[CORS] Interception OPTIONS directe:', req.path, 'Origin:', req.headers.origin);
     return handleOptionsRequest(req, res);
   }
   next();
 });
+
+// Gérer aussi avec app.options() pour double sécurité
+app.options('*', handleOptionsRequest);
 
 app.use(cors(corsOptions));
 
