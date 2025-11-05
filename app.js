@@ -68,6 +68,8 @@ const getAllowedOrigins = () => [
   'http://localhost:5174',
   'https://ecologis-web.vercel.app',
   'https://www.ecologis-web.vercel.app',
+  'https://ecopower-website.vercel.app',
+  'https://www.ecopower-website.vercel.app',
 ];
 
 const isOriginAllowed = (origin) => {
