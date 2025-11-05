@@ -32,15 +32,16 @@ app.get('/', (req, res) => {
 let mainApp;
 try {
   mainApp = require('../app');
-  // Si l'app principale se charge, utiliser ses routes
-  app.use(mainApp);
+  // Si l'app principale se charge, utiliser toutes ses routes
+  // On utilise le router de l'app principale comme middleware
+  app.use('/', mainApp);
   console.log('✅ [Vercel] App principale chargée avec succès');
 } catch (error) {
   console.error('💥 [Vercel] Erreur lors du chargement de l\'app principale:', error.message);
   console.error('💥 [Vercel] Stack:', error.stack);
   
-  // Routes de fallback
-  app.use('/auth/login', (req, res) => {
+  // Routes de fallback avec CORS
+  app.post('/auth/login', (req, res) => {
     res.status(500).json({
       message: 'Service temporairement indisponible',
       error: error.message
