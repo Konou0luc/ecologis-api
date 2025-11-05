@@ -210,12 +210,18 @@ const ensureDBConnected = async () => {
 // Middleware pour s'assurer que MongoDB est connecté avant chaque requête (Vercel)
 // IMPORTANT: Ce middleware doit être APRÈS le handler CORS mais AVANT les routes
 app.use(async (req, res, next) => {
+  // Ne pas bloquer les requêtes OPTIONS avec MongoDB
+  if (req.method === 'OPTIONS') {
+    return next();
+  }
+  
   if (process.env.VERCEL === '1' || process.env.VERCEL_ENV) {
     try {
       await ensureDBConnected();
     } catch (error) {
       console.error('[MONGODB] Erreur connexion:', error.message);
       // Ne pas bloquer la requête, mais logger l'erreur
+      // Les routes peuvent toujours fonctionner sans DB (pour certaines routes)
     }
   }
   next();
