@@ -279,11 +279,10 @@ if (!isVercel) {
 
   start();
 } else {
-  // Sur Vercel, initialiser MongoDB au démarrage
+  // Sur Vercel, NE PAS initialiser MongoDB au chargement
+  // La connexion sera faite à la demande par le middleware
   console.log('🌐 [Vercel] Mode serverless détecté');
-  connectDB().catch((error) => {
-    console.error('💥 [Vercel] Erreur lors de la connexion MongoDB initiale:', error);
-  });
+  // MongoDB sera connecté à la première requête via le middleware
 }
 
 module.exports = app;
