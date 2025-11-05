@@ -13,9 +13,22 @@ try {
   console.error('💥 [Vercel] Erreur lors du chargement de l\'app:', error.message);
   console.error('💥 [Vercel] Stack:', error.stack);
   
-  // Créer une app minimale en cas d'erreur
+  // Créer une app minimale en cas d'erreur avec CORS
   const express = require('express');
+  const cors = require('cors');
   app = express();
+  
+  // Configuration CORS pour l'app minimale
+  app.use(cors({
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    credentials: true
+  }));
+  
+  // Gérer les requêtes OPTIONS (preflight)
+  app.options('*', cors());
+  
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
   
