@@ -106,6 +106,12 @@ let mongoConnection = null;
 
 const connectDB = async () => {
   try {
+    // Vérifier que MONGO_URI est défini
+    if (!process.env.MONGO_URI) {
+      console.error('💥 [MongoDB] MONGO_URI n\'est pas défini dans les variables d\'environnement');
+      throw new Error('MONGO_URI environment variable is not set');
+    }
+
     // Si déjà connecté, réutiliser la connexion
     if (mongoose.connection.readyState === 1) {
       console.log('✅ [MongoDB] Connexion existante réutilisée');
