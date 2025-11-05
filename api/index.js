@@ -52,20 +52,7 @@ try {
   });
 }
 
-// Handler pour Vercel serverless functions
-module.exports = (req, res) => {
-  try {
-    return app(req, res);
-  } catch (error) {
-    console.error('💥 [Vercel] Erreur dans le handler:', error);
-    console.error('💥 [Vercel] Stack:', error.stack);
-    if (!res.headersSent) {
-      res.status(500).json({ 
-        message: 'Erreur interne du serveur',
-        error: error.message,
-        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-      });
-    }
-  }
-};
+// Export handler pour Vercel
+// Vercel détecte automatiquement les apps Express et les traite correctement
+module.exports = app;
 
