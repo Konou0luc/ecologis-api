@@ -1,0 +1,34 @@
+[1mdiff --git a/vercel.json b/vercel.json[m
+[1mindex 7cf6e4a..aee9b64 100644[m
+[1m--- a/vercel.json[m
+[1m+++ b/vercel.json[m
+[36m@@ -7,18 +7,6 @@[m
+         }[m
+     ],[m
+     "routes": [[m
+[31m-        {[m
+[31m-            "src": "/auth/login",[m
+[31m-            "methods": ["OPTIONS"],[m
+[31m-            "dest": "app.js",[m
+[31m-            "headers": {[m
+[31m-                "Access-Control-Allow-Origin": "*",[m
+[31m-                "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",[m
+[31m-                "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With",[m
+[31m-                "Access-Control-Allow-Credentials": "true",[m
+[31m-                "Access-Control-Max-Age": "86400"[m
+[31m-            }[m
+[31m-        },[m
+         {[m
+             "src": "/(.*)",[m
+             "dest": "app.js"[m
+[36m@@ -43,6 +31,10 @@[m
+                 {[m
+                     "key": "Access-Control-Allow-Credentials",[m
+                     "value": "true"[m
+[32m+[m[32m                },[m
+[32m+[m[32m                {[m
+[32m+[m[32m                    "key": "Access-Control-Max-Age",[m
+[32m+[m[32m                    "value": "86400"[m
+                 }[m
+             ][m
+         }[m

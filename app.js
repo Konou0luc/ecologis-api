@@ -2,7 +2,11 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
-require('dotenv').config();
+
+// Charger dotenv seulement en développement local (pas sur Vercel)
+if (process.env.VERCEL !== '1') {
+  require('dotenv').config();
+}
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -168,10 +172,15 @@ const connectDB = async () => {
     }
     
     mongoose.set('strictQuery', false);
-    await mongoose.connect(process.env.MONGO_URI);
+    const mongoUri = process.env.MONGO_URI;
+    if (!mongoUri) {
+      console.error('MONGO_URI n\'est pas défini');
+      throw new Error('MONGO_URI environment variable is required');
+    }
+    await mongoose.connect(mongoUri);
     console.log('Mongo connecté');
   } catch (error) {
-    console.log('Erreur connexion Mongo:', error);
+    console.error('Erreur connexion Mongo:', error.message);
     // Ne pas exit sur Vercel - laisser la fonction serverless gérer
     if (process.env.VERCEL !== '1') {
       process.exit(1);
@@ -179,14 +188,25 @@ const connectDB = async () => {
   }
 };
 
-// Connecter MongoDB au démarrage (une seule fois pour Vercel)
-if (process.env.VERCEL === '1') {
-  // Sur Vercel, connecter immédiatement mais ne pas démarrer de serveur
-  connectDB().catch(err => {
-    console.error('Erreur connexion MongoDB sur Vercel:', err);
-  });
-} else {
-  // En développement local, démarrer le serveur normalement
+// Connecter MongoDB de manière lazy (au premier appel sur Vercel)
+let dbConnected = false;
+const ensureDBConnected = async () => {
+  if (!dbConnected) {
+    await connectDB();
+    dbConnected = true;
+  }
+};
+
+// Middleware pour s'assurer que MongoDB est connecté avant chaque requête (Vercel)
+app.use(async (req, res, next) => {
+  if (process.env.VERCEL === '1') {
+    await ensureDBConnected();
+  }
+  next();
+});
+
+// En développement local, démarrer le serveur normalement
+if (process.env.VERCEL !== '1') {
   const start = async () => {
     await connectDB();
 
@@ -211,5 +231,4 @@ if (process.env.VERCEL === '1') {
 }
 
 // Pour Vercel serverless, exporter l'app directement
-// Pour le développement local, l'app est déjà démarrée par start()
 module.exports = app;
