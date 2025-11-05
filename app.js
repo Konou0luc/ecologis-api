@@ -184,14 +184,21 @@ app.use(async (req, res, next) => {
   }
 });
 
-app.use('/auth', authLimiter, require('./routes/auth'));
-app.use('/residents', residentLimiter, require('./routes/residents'));
-app.use('/consommations', require('./routes/consommations'));
-app.use('/factures', require('./routes/factures'));
-app.use('/abonnements', require('./routes/abonnements'));
-app.use('/maisons', require('./routes/maisons'));
-app.use('/messages', require('./routes/messages'));
-app.use('/admin', require('./routes/admin'));
+// Charger les routes avec gestion d'erreur
+try {
+  app.use('/auth', authLimiter, require('./routes/auth'));
+  app.use('/residents', residentLimiter, require('./routes/residents'));
+  app.use('/consommations', require('./routes/consommations'));
+  app.use('/factures', require('./routes/factures'));
+  app.use('/abonnements', require('./routes/abonnements'));
+  app.use('/maisons', require('./routes/maisons'));
+  app.use('/messages', require('./routes/messages'));
+  app.use('/admin', require('./routes/admin'));
+} catch (error) {
+  console.error('💥 [APP] Erreur lors du chargement des routes:', error);
+  console.error('💥 [APP] Stack:', error.stack);
+  // Ne pas faire crasher l'app, mais logger l'erreur
+}
 
 // Exposer config pour le frontend
 app.get('/config', (req, res) => {
