@@ -91,34 +91,7 @@ app.options('*', (req, res) => {
 // Middleware de secours pour OPTIONS (au cas où app.options() ne capture pas tout)
 app.use((req, res, next) => {
   if (req.method === 'OPTIONS') {
-    console.log('[CORS] Preflight request recue (middleware):', req.path, 'Origin:', req.headers.origin);
-    
-    const allowedOrigins = [
-      'http://localhost:3000',
-      'http://localhost:3001',
-      'http://localhost:5173',
-      'http://localhost:5174',
-      'https://ecologis-web.vercel.app',
-      'https://www.ecologis-web.vercel.app',
-    ];
-    
-    const isAllowedOrigin = !req.headers.origin || 
-      allowedOrigins.includes(req.headers.origin) ||
-      /^https:\/\/.*\.vercel\.app$/.test(req.headers.origin) ||
-      /^https:\/\/.*\.netlify\.app$/.test(req.headers.origin);
-    
-    if (isAllowedOrigin) {
-      res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
-      res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-      res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-      res.header('Access-Control-Allow-Credentials', 'true');
-      res.header('Access-Control-Max-Age', '86400');
-      return res.status(200).end();
-    } else {
-      console.log('[CORS] Origine non autorisee pour OPTIONS:', req.headers.origin);
-      res.status(403).end();
-      return;
-    }
+    return handleOptionsRequest(req, res);
   }
   next();
 });
@@ -183,35 +156,55 @@ app.use((req, res) => {
 
 const connectDB = async () => {
   try {
+    // Vérifier si déjà connecté (important pour Vercel serverless)
+    if (mongoose.connection.readyState === 1) {
+      console.log('Mongo déjà connecté');
+      return;
+    }
+    
     mongoose.set('strictQuery', false);
     await mongoose.connect(process.env.MONGO_URI);
     console.log('Mongo connecté');
   } catch (error) {
-    console.log(error);
-    process.exit(1);
+    console.log('Erreur connexion Mongo:', error);
+    // Ne pas exit sur Vercel - laisser la fonction serverless gérer
+    if (process.env.VERCEL !== '1') {
+      process.exit(1);
+    }
   }
 };
 
-const start = async () => {
-  await connectDB();
-
-  const server = app.listen(PORT, () => {
-    console.log(`Serveur démarré sur le port ${PORT}`);
+// Connecter MongoDB au démarrage (une seule fois pour Vercel)
+if (process.env.VERCEL === '1') {
+  // Sur Vercel, connecter immédiatement mais ne pas démarrer de serveur
+  connectDB().catch(err => {
+    console.error('Erreur connexion MongoDB sur Vercel:', err);
   });
+} else {
+  // En développement local, démarrer le serveur normalement
+  const start = async () => {
+    await connectDB();
 
-  const io = require('socket.io')(server, {
-    cors: {
-      origin: "*",
-      methods: ["GET", "POST"]
-    }
-  });
+    const server = app.listen(PORT, () => {
+      console.log(`Serveur démarré sur le port ${PORT}`);
+    });
 
-  require('./sockets/socketManager')(io);
+    const io = require('socket.io')(server, {
+      cors: {
+        origin: "*",
+        methods: ["GET", "POST"]
+      }
+    });
 
-  const { initCronJobs } = require('./utils/cronJobs');
-  initCronJobs();
-};
+    require('./sockets/socketManager')(io);
 
-start();
+    const { initCronJobs } = require('./utils/cronJobs');
+    initCronJobs();
+  };
 
+  start();
+}
+
+// Pour Vercel serverless, exporter l'app directement
+// Pour le développement local, l'app est déjà démarrée par start()
 module.exports = app;
