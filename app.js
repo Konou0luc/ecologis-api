@@ -53,29 +53,28 @@ const corsOptions = {
   maxAge: 86400, // 24 heures
 };
 
-// Gérer les requêtes OPTIONS (preflight CORS) EN PREMIER - AVANT tout autre middleware
-// IMPORTANT: Ce middleware doit être AVANT cors(), express.json() et les rate limiters
-// CRITIQUE pour Vercel: Répondre immédiatement aux OPTIONS sans redirection
-// Utiliser app.options() AVANT le middleware use() pour capturer toutes les routes OPTIONS
-app.options('*', (req, res) => {
-  console.log('[CORS] Preflight request recue (app.options):', req.path, 'Origin:', req.headers.origin);
+// Liste des origines autorisées (réutilisable)
+const getAllowedOrigins = () => [
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'https://ecologis-web.vercel.app',
+  'https://www.ecologis-web.vercel.app',
+];
+
+const isOriginAllowed = (origin) => {
+  if (!origin) return true;
+  const allowedOrigins = getAllowedOrigins();
+  return allowedOrigins.includes(origin) ||
+    /^https:\/\/.*\.vercel\.app$/.test(origin) ||
+    /^https:\/\/.*\.netlify\.app$/.test(origin);
+};
+
+const handleOptionsRequest = (req, res) => {
+  console.log('[CORS] Preflight request recue:', req.method, req.path, 'Origin:', req.headers.origin);
   
-  // Vérifier si l'origine est autorisée
-  const allowedOrigins = [
-    'http://localhost:3000',
-    'http://localhost:3001',
-    'http://localhost:5173',
-    'http://localhost:5174',
-    'https://ecologis-web.vercel.app',
-    'https://www.ecologis-web.vercel.app',
-  ];
-  
-  const isAllowedOrigin = !req.headers.origin || 
-    allowedOrigins.includes(req.headers.origin) ||
-    /^https:\/\/.*\.vercel\.app$/.test(req.headers.origin) ||
-    /^https:\/\/.*\.netlify\.app$/.test(req.headers.origin);
-  
-  if (isAllowedOrigin) {
+  if (isOriginAllowed(req.headers.origin)) {
     res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
     res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
@@ -86,7 +85,13 @@ app.options('*', (req, res) => {
     console.log('[CORS] Origine non autorisee pour OPTIONS:', req.headers.origin);
     res.status(403).end();
   }
-});
+};
+
+// Gérer les requêtes OPTIONS (preflight CORS) EN PREMIER - AVANT tout autre middleware
+// IMPORTANT: Ce middleware doit être AVANT cors(), express.json() et les rate limiters
+// CRITIQUE pour Vercel: Répondre immédiatement aux OPTIONS sans redirection
+// Utiliser app.options() AVANT le middleware use() pour capturer toutes les routes OPTIONS
+app.options('*', handleOptionsRequest);
 
 // Middleware de secours pour OPTIONS (au cas où app.options() ne capture pas tout)
 app.use((req, res, next) => {
