@@ -61,7 +61,8 @@ app.options('*', cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-const authLimiter = rateLimit({
+// Rate limiting - désactivé temporairement sur Vercel pour éviter les problèmes
+const authLimiter = process.env.VERCEL ? (req, res, next) => next() : rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 30, // 30 tentatives par IP (augmenté pour tests)
   message: 'Trop de tentatives, réessayez plus tard',
@@ -69,7 +70,7 @@ const authLimiter = rateLimit({
   legacyHeaders: false, // Désactive X-RateLimit-*
 });
 
-const residentLimiter = rateLimit({
+const residentLimiter = process.env.VERCEL ? (req, res, next) => next() : rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 10, // 10 requêtes par IP
   message: 'Trop de requêtes, réessayez plus tard',
@@ -246,24 +247,24 @@ const isVercel = !!process.env.VERCEL;
 
 // Si on n'est pas sur Vercel, démarrer le serveur traditionnel
 if (!isVercel) {
-  const start = async () => {
+const start = async () => {
     try {
-      await connectDB();
+  await connectDB();
 
-      const server = app.listen(PORT, () => {
+  const server = app.listen(PORT, () => {
         console.log(`🚀 Serveur démarré sur le port ${PORT}`);
-      });
+  });
 
       // Socket.io uniquement en mode non-serverless
       try {
-        const io = require('socket.io')(server, {
-          cors: {
-            origin: "*",
-            methods: ["GET", "POST"]
-          }
-        });
+  const io = require('socket.io')(server, {
+    cors: {
+      origin: "*",
+      methods: ["GET", "POST"]
+    }
+  });
 
-        require('./sockets/socketManager')(io);
+  require('./sockets/socketManager')(io);
         console.log('✅ Socket.io initialisé');
       } catch (socketError) {
         console.warn('⚠️ Socket.io non disponible:', socketError.message);
@@ -271,8 +272,8 @@ if (!isVercel) {
 
       // Cron jobs uniquement en mode non-serverless
       try {
-        const { initCronJobs } = require('./utils/cronJobs');
-        initCronJobs();
+  const { initCronJobs } = require('./utils/cronJobs');
+  initCronJobs();
         console.log('✅ Cron jobs initialisés');
       } catch (cronError) {
         console.warn('⚠️ Cron jobs non disponibles:', cronError.message);
@@ -281,9 +282,9 @@ if (!isVercel) {
       console.error('💥 Erreur lors du démarrage du serveur:', error);
       process.exit(1);
     }
-  };
+};
 
-  start();
+start();
 } else {
   // Sur Vercel, NE PAS initialiser MongoDB au chargement
   // La connexion sera faite à la demande par le middleware
