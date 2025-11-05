@@ -11,12 +11,12 @@ if (process.env.VERCEL !== '1') {
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// CRITIQUE: Désactiver strict routing pour éviter les redirections de trailing slash
+app.set('strict routing', false);
+
 // Requis derrière un proxy (Vercel) pour que req.ip soit correct et
 // que express-rate-limit n'échoue pas avec X-Forwarded-For
 app.set('trust proxy', 1);
-
-// CRITIQUE: Désactiver strict routing pour éviter les redirections de trailing slash
-app.set('strict routing', false);
 
 // Configuration CORS améliorée
 const corsOptions = {
@@ -94,16 +94,21 @@ const handleOptionsRequest = (req, res) => {
   }
 };
 
-// CRITIQUE: Gérer OPTIONS AVANT tout autre middleware pour éviter les redirections Vercel
-// Le middleware doit être le TRÈS PREMIER pour intercepter OPTIONS avant toute autre logique
-app.use((req, res, next) => {
-  // Intercepter OPTIONS immédiatement, sans passer par d'autres middlewares
+// SOLUTION DEFINITIVE: Créer un handler Express qui répond AVANT toute redirection Vercel
+// Ce middleware DOIT être le PREMIER middleware pour capturer OPTIONS avant toute autre logique
+const corsHandler = (req, res, next) => {
+  // Intercepter OPTIONS immédiatement, SANS appeler next() pour éviter toute redirection
   if (req.method === 'OPTIONS') {
     console.log('[CORS] Interception OPTIONS directe:', req.path, 'Origin:', req.headers.origin);
-    return handleOptionsRequest(req, res);
+    handleOptionsRequest(req, res);
+    // CRITIQUE: Ne PAS appeler next() - terminer la réponse ici
+    return;
   }
   next();
-});
+};
+
+// Appliquer le handler CORS en PREMIER (avant trust proxy même)
+app.use(corsHandler);
 
 // Gérer aussi avec app.options() pour double sécurité
 app.options('*', handleOptionsRequest);
