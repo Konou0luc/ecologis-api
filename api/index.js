@@ -287,8 +287,18 @@ const loadRoutes = () => {
       const routeModule = require(file);
       app.use(path, routeModule);
       console.log(`✅ Route ${path} chargée`);
+      
+      // Log supplémentaire pour les routes admin
+      if (path === '/admin') {
+        console.log(`✅ Routes admin montées sur ${path}`);
+        // Vérifier que le router a bien des routes
+        if (routeModule && routeModule.stack) {
+          console.log(`✅ Routes admin disponibles:`, routeModule.stack.map(layer => layer.route?.path || layer.regexp.toString()).slice(0, 5));
+        }
+      }
     } catch (error) {
       console.error(`❌ Erreur route ${path}:`, error.message);
+      console.error(`❌ Stack pour ${path}:`, error.stack);
       // Ne pas bloquer l'app si une route échoue
     }
   });
@@ -313,9 +323,20 @@ app.use((err, req, res, next) => {
   });
 });
 
-// 404
+// 404 avec plus de détails pour debug
 app.use((req, res) => {
-  res.status(404).json({ message: 'Route non trouvée' });
+  console.log(`⚠️ Route non trouvée: ${req.method} ${req.path}`);
+  console.log(`⚠️ Routes disponibles:`, app._router?.stack?.map(layer => {
+    if (layer.route) {
+      return `${Object.keys(layer.route.methods).join(',').toUpperCase()} ${layer.route.path}`;
+    }
+    return null;
+  }).filter(Boolean).slice(0, 10) || 'Aucune route trouvée');
+  res.status(404).json({ 
+    message: 'Route non trouvée',
+    path: req.path,
+    method: req.method
+  });
 });
 
 // Export avec gestion d'erreur
