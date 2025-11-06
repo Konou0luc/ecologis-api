@@ -33,6 +33,7 @@ app.use(express.urlencoded({ extended: true }));
 let mongoose = null;
 let mongoConnected = false;
 let mongoConnectionAttempts = 0;
+let mongoConnectionPromise = null;
 
 const initMongoDB = () => {
   if (mongoose) return mongoose;
@@ -50,101 +51,135 @@ const initMongoDB = () => {
 };
 
 const connectDB = async () => {
-  try {
-    // Initialiser mongoose si nécessaire
-    if (!mongoose) {
-      initMongoDB();
-      if (!mongoose) {
-        throw new Error('Mongoose non disponible');
-      }
-    }
-
-    // Vérifier MONGO_URI
-    if (!process.env.MONGO_URI) {
-      const errorMsg = 'MONGO_URI non défini dans les variables d\'environnement Vercel';
-      console.error('❌', errorMsg);
-      console.error('❌ Variables disponibles:', Object.keys(process.env).filter(k => k.includes('MONGO') || k.includes('DB')));
-      throw new Error(errorMsg);
-    }
-
-    // Logger l'URI (sans afficher le mot de passe)
-    const mongoUriDisplay = process.env.MONGO_URI.replace(/:[^:@]+@/, ':****@');
-    console.log('🔄 Tentative de connexion MongoDB...', mongoUriDisplay.substring(0, 50) + '...');
-
-    // Si déjà connecté, réutiliser
-    if (mongoose.connection.readyState === 1) {
-      mongoConnected = true;
-      console.log('✅ MongoDB déjà connecté');
-      return mongoose.connection;
-    }
-
-    // Si connexion en cours, attendre (avec timeout plus long)
-    if (mongoose.connection.readyState === 2) {
-      console.log('⏳ Connexion MongoDB en cours, attente...');
-      await new Promise((resolve, reject) => {
-        const timeout = setTimeout(() => {
-          reject(new Error('Timeout: connexion en cours depuis plus de 15 secondes'));
-        }, 15000);
-        
-        mongoose.connection.once('connected', () => {
-          clearTimeout(timeout);
-          mongoConnected = true;
-          console.log('✅ MongoDB connecté (après attente)');
-          resolve();
-        });
-        
-        mongoose.connection.once('error', (err) => {
-          clearTimeout(timeout);
-          reject(err);
-        });
-      });
-      return mongoose.connection;
-    }
-
-    // Nouvelle connexion avec timeouts augmentés
-    mongoConnectionAttempts++;
-    console.log(`🔄 Tentative de connexion #${mongoConnectionAttempts}...`);
-    
-    await mongoose.connect(process.env.MONGO_URI, {
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 15000, // Augmenté à 15s
-      socketTimeoutMS: 45000,
-      connectTimeoutMS: 15000, // Augmenté à 15s
-      bufferMaxEntries: 0,
-      bufferCommands: false,
-    });
-    
-    mongoConnected = true;
-    console.log('✅ MongoDB connecté avec succès');
-    
-    // Écouteurs d'événements
-    mongoose.connection.on('error', (err) => {
-      console.error('❌ Erreur MongoDB après connexion:', err.message);
-      mongoConnected = false;
-    });
-
-    mongoose.connection.on('disconnected', () => {
-      console.log('⚠️ MongoDB déconnecté');
-      mongoConnected = false;
-    });
-
-    mongoose.connection.on('reconnected', () => {
-      console.log('✅ MongoDB reconnecté');
-      mongoConnected = true;
-    });
-
-    return mongoose.connection;
-  } catch (error) {
-    mongoConnected = false;
-    console.error('💥 Erreur connexion MongoDB:', error.message);
-    console.error('💥 Stack:', error.stack);
-    console.error('💥 MONGO_URI défini:', !!process.env.MONGO_URI);
-    if (process.env.MONGO_URI) {
-      const uriPreview = process.env.MONGO_URI.substring(0, 30) + '...';
-      console.error('💥 MONGO_URI preview:', uriPreview);
-    }
-    throw error;
+  // Si une connexion est déjà en cours, réutiliser la promesse
+  if (mongoConnectionPromise) {
+    console.log('⏳ Réutilisation de la connexion en cours...');
+    return mongoConnectionPromise;
   }
+
+  mongoConnectionPromise = (async () => {
+    try {
+      // Initialiser mongoose si nécessaire
+      if (!mongoose) {
+        initMongoDB();
+        if (!mongoose) {
+          throw new Error('Mongoose non disponible');
+        }
+      }
+
+      // Vérifier MONGO_URI
+      if (!process.env.MONGO_URI) {
+        const errorMsg = 'MONGO_URI non défini dans les variables d\'environnement Vercel';
+        console.error('❌', errorMsg);
+        throw new Error(errorMsg);
+      }
+
+      // Si déjà connecté, réutiliser
+      if (mongoose.connection.readyState === 1) {
+        mongoConnected = true;
+        console.log('✅ MongoDB déjà connecté');
+        return mongoose.connection;
+      }
+
+      // Logger l'URI (sans afficher le mot de passe)
+      const mongoUriDisplay = process.env.MONGO_URI.replace(/:[^:@]+@/, ':****@');
+      console.log('🔄 Tentative de connexion MongoDB...', mongoUriDisplay.substring(0, 60) + '...');
+
+      // Si connexion en cours, attendre
+      if (mongoose.connection.readyState === 2) {
+        console.log('⏳ Connexion MongoDB en cours, attente...');
+        await new Promise((resolve, reject) => {
+          const timeout = setTimeout(() => {
+            reject(new Error('Timeout: connexion en cours depuis plus de 20 secondes'));
+          }, 20000);
+          
+          mongoose.connection.once('connected', () => {
+            clearTimeout(timeout);
+            mongoConnected = true;
+            console.log('✅ MongoDB connecté (après attente)');
+            resolve();
+          });
+          
+          mongoose.connection.once('error', (err) => {
+            clearTimeout(timeout);
+            reject(err);
+          });
+        });
+        return mongoose.connection;
+      }
+
+      // Nouvelle connexion avec options optimisées pour Vercel
+      mongoConnectionAttempts++;
+      console.log(`🔄 Tentative de connexion #${mongoConnectionAttempts}...`);
+      
+      // Options de connexion optimisées pour Vercel serverless
+      const connectionOptions = {
+        maxPoolSize: 10,
+        minPoolSize: 1,
+        serverSelectionTimeoutMS: 20000, // 20 secondes
+        socketTimeoutMS: 45000,
+        connectTimeoutMS: 20000, // 20 secondes
+        heartbeatFrequencyMS: 10000,
+        retryWrites: true,
+        retryReads: true,
+        bufferMaxEntries: 0,
+        bufferCommands: false,
+        // Pour MongoDB Atlas
+        ssl: true,
+        sslValidate: true,
+      };
+
+      // Si l'URI contient déjà des options, ne pas forcer ssl
+      if (process.env.MONGO_URI.includes('ssl=') || process.env.MONGO_URI.includes('tls=')) {
+        delete connectionOptions.ssl;
+        delete connectionOptions.sslValidate;
+      }
+
+      await mongoose.connect(process.env.MONGO_URI, connectionOptions);
+      
+      mongoConnected = true;
+      console.log('✅ MongoDB connecté avec succès');
+      
+      // Écouteurs d'événements
+      mongoose.connection.on('error', (err) => {
+        console.error('❌ Erreur MongoDB après connexion:', err.message);
+        mongoConnected = false;
+        mongoConnectionPromise = null; // Permettre une nouvelle tentative
+      });
+
+      mongoose.connection.on('disconnected', () => {
+        console.log('⚠️ MongoDB déconnecté');
+        mongoConnected = false;
+        mongoConnectionPromise = null; // Permettre une nouvelle tentative
+      });
+
+      mongoose.connection.on('reconnected', () => {
+        console.log('✅ MongoDB reconnecté');
+        mongoConnected = true;
+      });
+
+      return mongoose.connection;
+    } catch (error) {
+      mongoConnected = false;
+      mongoConnectionPromise = null; // Permettre une nouvelle tentative
+      console.error('💥 Erreur connexion MongoDB:', error.message);
+      console.error('💥 Type d\'erreur:', error.name);
+      console.error('💥 Code d\'erreur:', error.code);
+      if (error.message.includes('authentication failed')) {
+        console.error('💥 Problème d\'authentification - vérifiez le nom d\'utilisateur et le mot de passe');
+      }
+      if (error.message.includes('ENOTFOUND') || error.message.includes('getaddrinfo')) {
+        console.error('💥 Problème de résolution DNS - vérifiez l\'URI MongoDB');
+      }
+      if (error.message.includes('timeout') || error.message.includes('ETIMEDOUT')) {
+        console.error('💥 Timeout de connexion - vérifiez les restrictions IP sur MongoDB Atlas');
+        console.error('💥 Assurez-vous que "Allow access from anywhere" (0.0.0.0/0) est activé');
+      }
+      throw error;
+    }
+  })();
+
+  return mongoConnectionPromise;
 };
 
 // Middleware MongoDB - PLACÉ AVANT LES ROUTES
@@ -167,10 +202,15 @@ app.use(async (req, res, next) => {
     return res.status(503).json({ 
       message: 'Base de données non accessible',
       error: process.env.NODE_ENV === 'development' ? error.message : 'Service temporairement indisponible',
+      hint: error.message.includes('timeout') || error.message.includes('ETIMEDOUT') 
+        ? 'Vérifiez les restrictions IP sur MongoDB Atlas (doit autoriser 0.0.0.0/0)'
+        : undefined,
       details: process.env.NODE_ENV === 'development' ? {
         mongoUriDefined: !!process.env.MONGO_URI,
         connectionState: mongoose ? mongoose.connection.readyState : 'mongoose not initialized',
-        attempts: mongoConnectionAttempts
+        attempts: mongoConnectionAttempts,
+        errorType: error.name,
+        errorCode: error.code
       } : undefined
     });
   }
