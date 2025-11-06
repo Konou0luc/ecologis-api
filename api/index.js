@@ -3,7 +3,6 @@ process.env.VERCEL = '1';
 
 const express = require('express');
 const cors = require('cors');
-const mongoose = require('mongoose');
 const app = express();
 
 // Configuration CORS - TOUJOURS ACTIVE
@@ -19,7 +18,7 @@ app.use((req, res, next) => {
   if (req.method === 'OPTIONS') {
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type', 'Authorization, X-Requested-With');
+    res.header('Access-Control-Allow-Headers', 'Content-Type', 'Authorization', 'X-Requested-With');
     res.header('Access-Control-Allow-Credentials', 'true');
     res.header('Access-Control-Max-Age', '86400');
     return res.status(200).end();
@@ -30,33 +29,81 @@ app.use((req, res, next) => {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Configuration MongoDB AVANT les routes
-mongoose.set('strictQuery', false);
-// Augmenter le buffer timeout pour éviter les timeouts
-mongoose.set('bufferCommands', true);
-mongoose.set('bufferMaxEntries', 0);
+// Route principale - TOUJOURS FONCTIONNELLE (même sans MongoDB)
+app.get('/', (req, res) => {
+  try {
+    const mongoose = require('mongoose');
+    res.json({
+      message: '✅ API Ecopower - Gestion de consommation électrique',
+      status: 'online',
+      timestamp: new Date().toISOString(),
+      version: '1.0.0',
+      platform: 'Vercel Serverless',
+      database: {
+        status: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+      }
+    });
+  } catch (error) {
+    res.json({
+      message: '✅ API Ecopower - Gestion de consommation électrique',
+      status: 'online',
+      timestamp: new Date().toISOString(),
+      version: '1.0.0',
+      platform: 'Vercel Serverless'
+    });
+  }
+});
 
-// Fonction de connexion MongoDB optimisée
+// Route config
+app.get('/config', (req, res) => {
+  res.json({ freeMode: process.env.FREE_MODE === 'true' });
+});
+
+// Configuration MongoDB (lazy loading)
+let mongoose = null;
+let mongoConnected = false;
+
+const initMongoDB = () => {
+  if (mongoose) return mongoose;
+  
+  try {
+    mongoose = require('mongoose');
+    mongoose.set('strictQuery', false);
+    mongoose.set('bufferCommands', false);
+    mongoose.set('bufferMaxEntries', 0);
+    return mongoose;
+  } catch (error) {
+    console.error('❌ Erreur chargement mongoose:', error.message);
+    return null;
+  }
+};
+
 const connectDB = async () => {
   try {
+    if (!mongoose) {
+      initMongoDB();
+      if (!mongoose) {
+        throw new Error('Mongoose non disponible');
+      }
+    }
+
     if (!process.env.MONGO_URI) {
-      console.error('❌ MONGO_URI non défini');
       throw new Error('MONGO_URI not set');
     }
 
     // Si déjà connecté, réutiliser
     if (mongoose.connection.readyState === 1) {
-      console.log('✅ MongoDB déjà connecté');
+      mongoConnected = true;
       return mongoose.connection;
     }
 
-    // Si connexion en cours, attendre
+    // Si connexion en cours, attendre (avec timeout court)
     if (mongoose.connection.readyState === 2) {
-      console.log('⏳ Connexion MongoDB en cours...');
       await new Promise((resolve, reject) => {
-        const timeout = setTimeout(() => reject(new Error('Timeout attente connexion')), 10000);
+        const timeout = setTimeout(() => reject(new Error('Timeout attente connexion')), 5000);
         mongoose.connection.once('connected', () => {
           clearTimeout(timeout);
+          mongoConnected = true;
           resolve();
         });
         mongoose.connection.once('error', (err) => {
@@ -68,28 +115,32 @@ const connectDB = async () => {
     }
 
     // Nouvelle connexion
-    console.log('🔄 Connexion à MongoDB...');
     await mongoose.connect(process.env.MONGO_URI, {
       maxPoolSize: 10,
-      serverSelectionTimeoutMS: 10000, // Augmenté à 10s
-      socketTimeoutMS: 45000,
-      connectTimeoutMS: 10000,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 30000,
+      connectTimeoutMS: 5000,
       bufferMaxEntries: 0,
-      bufferCommands: false, // Désactiver le buffer pour forcer la connexion immédiate
+      bufferCommands: false,
     });
-    console.log('✅ MongoDB connecté avec succès');
+    
+    mongoConnected = true;
+    console.log('✅ MongoDB connecté');
     
     mongoose.connection.on('error', (err) => {
-      console.error('❌ Erreur MongoDB:', err);
+      console.error('❌ Erreur MongoDB:', err.message);
+      mongoConnected = false;
     });
 
     mongoose.connection.on('disconnected', () => {
       console.log('⚠️ MongoDB déconnecté');
+      mongoConnected = false;
     });
 
     return mongoose.connection;
   } catch (error) {
     console.error('💥 Erreur connexion MongoDB:', error.message);
+    mongoConnected = false;
     throw error;
   }
 };
@@ -103,109 +154,74 @@ app.use(async (req, res, next) => {
   
   try {
     // S'assurer que MongoDB est connecté
-    if (mongoose.connection.readyState !== 1) {
+    if (!mongoConnected || (mongoose && mongoose.connection.readyState !== 1)) {
       await connectDB();
     }
     next();
   } catch (error) {
     console.error('💥 [MIDDLEWARE] Erreur MongoDB:', error.message);
-    res.status(503).json({ 
+    // Ne pas bloquer la requête, mais retourner une erreur
+    return res.status(503).json({ 
       message: 'Base de données non accessible',
       error: process.env.NODE_ENV === 'development' ? error.message : 'Service temporairement indisponible'
     });
   }
 });
 
-// Route principale - TOUJOURS FONCTIONNELLE
-app.get('/', (req, res) => {
-  res.json({
-    message: '✅ API Ecopower - Gestion de consommation électrique',
-    status: 'online',
-    timestamp: new Date().toISOString(),
-    version: '1.0.0',
-    platform: 'Vercel Serverless',
-    database: {
-      status: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+// Charger les routes avec gestion d'erreur robuste
+const loadRoutes = () => {
+  // Route auth - CRITIQUE
+  try {
+    const authRoutes = require('../routes/auth');
+    app.use('/auth', authRoutes);
+    console.log('✅ Route /auth chargée');
+  } catch (error) {
+    console.error('❌ Erreur route /auth:', error.message);
+    // Fallback pour /auth/login
+    app.post('/auth/login', (req, res) => {
+      res.status(500).json({ 
+        message: 'Service temporairement indisponible',
+        error: error.message 
+      });
+    });
+  }
+
+  // Autres routes
+  const routes = [
+    { path: '/residents', file: '../routes/residents' },
+    { path: '/consommations', file: '../routes/consommations' },
+    { path: '/factures', file: '../routes/factures' },
+    { path: '/abonnements', file: '../routes/abonnements' },
+    { path: '/maisons', file: '../routes/maisons' },
+    { path: '/messages', file: '../routes/messages' },
+    { path: '/admin', file: '../routes/admin' },
+  ];
+
+  routes.forEach(({ path, file }) => {
+    try {
+      const routeModule = require(file);
+      app.use(path, routeModule);
+      console.log(`✅ Route ${path} chargée`);
+    } catch (error) {
+      console.error(`❌ Erreur route ${path}:`, error.message);
+      // Ne pas bloquer l'app si une route échoue
     }
   });
-});
+};
 
-// Route config
-app.get('/config', (req, res) => {
-  res.json({ freeMode: process.env.FREE_MODE === 'true' });
-});
-
-// Charger les routes une par une pour identifier les problèmes
+// Charger les routes dans un try-catch global
 try {
-  const authRoutes = require('../routes/auth');
-  app.use('/auth', authRoutes);
-  console.log('✅ Route /auth chargée');
+  loadRoutes();
 } catch (error) {
-  console.error('❌ Erreur route /auth:', error.message);
-  app.post('/auth/login', (req, res) => {
-    res.status(500).json({ message: 'Route auth non disponible', error: error.message });
-  });
+  console.error('💥 Erreur critique lors du chargement des routes:', error.message);
+  console.error('💥 Stack:', error.stack);
+  // L'app continue de fonctionner avec les routes de base
 }
 
-try {
-  const residentsRoutes = require('../routes/residents');
-  app.use('/residents', residentsRoutes);
-  console.log('✅ Route /residents chargée');
-} catch (error) {
-  console.error('❌ Erreur route /residents:', error.message);
-}
-
-try {
-  const consommationsRoutes = require('../routes/consommations');
-  app.use('/consommations', consommationsRoutes);
-  console.log('✅ Route /consommations chargée');
-} catch (error) {
-  console.error('❌ Erreur route /consommations:', error.message);
-}
-
-try {
-  const facturesRoutes = require('../routes/factures');
-  app.use('/factures', facturesRoutes);
-  console.log('✅ Route /factures chargée');
-} catch (error) {
-  console.error('❌ Erreur route /factures:', error.message);
-}
-
-try {
-  const abonnementsRoutes = require('../routes/abonnements');
-  app.use('/abonnements', abonnementsRoutes);
-  console.log('✅ Route /abonnements chargée');
-} catch (error) {
-  console.error('❌ Erreur route /abonnements:', error.message);
-}
-
-try {
-  const maisonsRoutes = require('../routes/maisons');
-  app.use('/maisons', maisonsRoutes);
-  console.log('✅ Route /maisons chargée');
-} catch (error) {
-  console.error('❌ Erreur route /maisons:', error.message);
-}
-
-try {
-  const messagesRoutes = require('../routes/messages');
-  app.use('/messages', messagesRoutes);
-  console.log('✅ Route /messages chargée');
-} catch (error) {
-  console.error('❌ Erreur route /messages:', error.message);
-}
-
-try {
-  const adminRoutes = require('../routes/admin');
-  app.use('/admin', adminRoutes);
-  console.log('✅ Route /admin chargée');
-} catch (error) {
-  console.error('❌ Erreur route /admin:', error.message);
-}
-
-// Gestion d'erreurs
+// Gestion d'erreurs globale
 app.use((err, req, res, next) => {
-  console.error('💥 Erreur:', err);
+  console.error('💥 Erreur non gérée:', err);
+  console.error('💥 Stack:', err.stack);
   res.status(500).json({ 
     message: 'Erreur interne du serveur',
     error: process.env.NODE_ENV === 'development' ? err.message : undefined
@@ -217,4 +233,5 @@ app.use((req, res) => {
   res.status(404).json({ message: 'Route non trouvée' });
 });
 
+// Export avec gestion d'erreur
 module.exports = app;
