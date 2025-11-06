@@ -113,6 +113,7 @@ const connectDB = async () => {
       console.log(`🔄 Tentative de connexion #${mongoConnectionAttempts}...`);
       
       // Options de connexion optimisées pour Vercel serverless
+      // Note: bufferMaxEntries et sslValidate ne sont plus supportés dans les nouvelles versions
       const connectionOptions = {
         maxPoolSize: 10,
         minPoolSize: 1,
@@ -122,17 +123,15 @@ const connectDB = async () => {
         heartbeatFrequencyMS: 10000,
         retryWrites: true,
         retryReads: true,
-        bufferMaxEntries: 0,
-        bufferCommands: false,
-        // Pour MongoDB Atlas
-        ssl: true,
-        sslValidate: true,
+        // Pour MongoDB Atlas - utiliser tls au lieu de ssl
+        tls: true,
+        tlsAllowInvalidCertificates: false,
       };
 
-      // Si l'URI contient déjà des options, ne pas forcer ssl
+      // Si l'URI contient déjà des options TLS/SSL, ne pas forcer
       if (process.env.MONGO_URI.includes('ssl=') || process.env.MONGO_URI.includes('tls=')) {
-        delete connectionOptions.ssl;
-        delete connectionOptions.sslValidate;
+        delete connectionOptions.tls;
+        delete connectionOptions.tlsAllowInvalidCertificates;
       }
 
       await mongoose.connect(process.env.MONGO_URI, connectionOptions);
