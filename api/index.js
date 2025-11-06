@@ -3,6 +3,7 @@ process.env.VERCEL = '1';
 
 const express = require('express');
 const cors = require('cors');
+const mongoose = require('mongoose');
 const app = express();
 
 // Configuration CORS - TOUJOURS ACTIVE
@@ -14,12 +15,11 @@ app.use(cors({
 }));
 
 // Gérer les requêtes OPTIONS (preflight) - CRITIQUE pour CORS
-// Utiliser un middleware au lieu de app.options('*') pour éviter les problèmes path-to-regexp
 app.use((req, res, next) => {
   if (req.method === 'OPTIONS') {
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    res.header('Access-Control-Allow-Headers', 'Content-Type', 'Authorization, X-Requested-With');
     res.header('Access-Control-Allow-Credentials', 'true');
     res.header('Access-Control-Max-Age', '86400');
     return res.status(200).end();
@@ -30,6 +30,92 @@ app.use((req, res, next) => {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Configuration MongoDB AVANT les routes
+mongoose.set('strictQuery', false);
+// Augmenter le buffer timeout pour éviter les timeouts
+mongoose.set('bufferCommands', true);
+mongoose.set('bufferMaxEntries', 0);
+
+// Fonction de connexion MongoDB optimisée
+const connectDB = async () => {
+  try {
+    if (!process.env.MONGO_URI) {
+      console.error('❌ MONGO_URI non défini');
+      throw new Error('MONGO_URI not set');
+    }
+
+    // Si déjà connecté, réutiliser
+    if (mongoose.connection.readyState === 1) {
+      console.log('✅ MongoDB déjà connecté');
+      return mongoose.connection;
+    }
+
+    // Si connexion en cours, attendre
+    if (mongoose.connection.readyState === 2) {
+      console.log('⏳ Connexion MongoDB en cours...');
+      await new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error('Timeout attente connexion')), 10000);
+        mongoose.connection.once('connected', () => {
+          clearTimeout(timeout);
+          resolve();
+        });
+        mongoose.connection.once('error', (err) => {
+          clearTimeout(timeout);
+          reject(err);
+        });
+      });
+      return mongoose.connection;
+    }
+
+    // Nouvelle connexion
+    console.log('🔄 Connexion à MongoDB...');
+    await mongoose.connect(process.env.MONGO_URI, {
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 10000, // Augmenté à 10s
+      socketTimeoutMS: 45000,
+      connectTimeoutMS: 10000,
+      bufferMaxEntries: 0,
+      bufferCommands: false, // Désactiver le buffer pour forcer la connexion immédiate
+    });
+    console.log('✅ MongoDB connecté avec succès');
+    
+    mongoose.connection.on('error', (err) => {
+      console.error('❌ Erreur MongoDB:', err);
+    });
+
+    mongoose.connection.on('disconnected', () => {
+      console.log('⚠️ MongoDB déconnecté');
+    });
+
+    return mongoose.connection;
+  } catch (error) {
+    console.error('💥 Erreur connexion MongoDB:', error.message);
+    throw error;
+  }
+};
+
+// Middleware MongoDB - PLACÉ AVANT LES ROUTES
+app.use(async (req, res, next) => {
+  // Laisser passer les routes qui n'ont pas besoin de MongoDB
+  if (req.path === '/' || req.path === '/config') {
+    return next();
+  }
+  
+  try {
+    // S'assurer que MongoDB est connecté
+    if (mongoose.connection.readyState !== 1) {
+      await connectDB();
+    }
+    next();
+  } catch (error) {
+    console.error('💥 [MIDDLEWARE] Erreur MongoDB:', error.message);
+    res.status(503).json({ 
+      message: 'Base de données non accessible',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Service temporairement indisponible'
+    });
+  }
+});
+
 // Route principale - TOUJOURS FONCTIONNELLE
 app.get('/', (req, res) => {
   res.json({
@@ -37,7 +123,10 @@ app.get('/', (req, res) => {
     status: 'online',
     timestamp: new Date().toISOString(),
     version: '1.0.0',
-    platform: 'Vercel Serverless'
+    platform: 'Vercel Serverless',
+    database: {
+      status: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+    }
   });
 });
 
@@ -48,7 +137,6 @@ app.get('/config', (req, res) => {
 
 // Charger les routes une par une pour identifier les problèmes
 try {
-  // Route auth - CRITIQUE pour le login
   const authRoutes = require('../routes/auth');
   app.use('/auth', authRoutes);
   console.log('✅ Route /auth chargée');
@@ -115,54 +203,12 @@ try {
   console.error('❌ Erreur route /admin:', error.message);
 }
 
-// Middleware MongoDB - charger à la demande
-const mongoose = require('mongoose');
-const connectDB = async () => {
-  try {
-    if (!process.env.MONGO_URI) {
-      throw new Error('MONGO_URI not set');
-    }
-    if (mongoose.connection.readyState === 1) {
-      return mongoose.connection;
-    }
-    mongoose.set('strictQuery', false);
-    await mongoose.connect(process.env.MONGO_URI, {
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
-    });
-    console.log('✅ MongoDB connecté');
-    return mongoose.connection;
-  } catch (error) {
-    console.error('❌ Erreur MongoDB:', error.message);
-    throw error;
-  }
-};
-
-// Middleware pour MongoDB - seulement si nécessaire
-app.use(async (req, res, next) => {
-  if (req.path === '/' || req.path === '/config') {
-    return next();
-  }
-  try {
-    if (mongoose.connection.readyState !== 1) {
-      await connectDB();
-    }
-    next();
-  } catch (error) {
-    res.status(503).json({ 
-      message: 'Base de données non accessible',
-      error: error.message 
-    });
-  }
-});
-
 // Gestion d'erreurs
 app.use((err, req, res, next) => {
   console.error('💥 Erreur:', err);
   res.status(500).json({ 
     message: 'Erreur interne du serveur',
-    error: err.message 
+    error: process.env.NODE_ENV === 'development' ? err.message : undefined
   });
 });
 
