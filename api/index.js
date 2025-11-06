@@ -3,6 +3,7 @@ process.env.VERCEL = '1';
 
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 const app = express();
 
 // Configuration CORS - TOUJOURS ACTIVE
@@ -254,9 +255,15 @@ app.get('/config', (req, res) => {
 
 // Charger les routes avec gestion d'erreur robuste
 const loadRoutes = () => {
+  // Utiliser __dirname pour construire les chemins correctement dans Vercel
+  const routesDir = path.join(__dirname, '..', 'routes');
+  console.log('📁 Routes directory:', routesDir);
+  
   // Route auth - CRITIQUE
   try {
-    const authRoutes = require('../routes/auth');
+    const authRoutesPath = path.join(routesDir, 'auth.js');
+    console.log('📁 Chargement auth depuis:', authRoutesPath);
+    const authRoutes = require(authRoutesPath);
     app.use('/auth', authRoutes);
     console.log('✅ Route /auth chargée');
   } catch (error) {
@@ -273,32 +280,35 @@ const loadRoutes = () => {
 
   // Autres routes
   const routes = [
-    { path: '/residents', file: '../routes/residents' },
-    { path: '/consommations', file: '../routes/consommations' },
-    { path: '/factures', file: '../routes/factures' },
-    { path: '/abonnements', file: '../routes/abonnements' },
-    { path: '/maisons', file: '../routes/maisons' },
-    { path: '/messages', file: '../routes/messages' },
-    { path: '/admin', file: '../routes/admin' },
+    { path: '/residents', file: 'residents.js' },
+    { path: '/consommations', file: 'consommations.js' },
+    { path: '/factures', file: 'factures.js' },
+    { path: '/abonnements', file: 'abonnements.js' },
+    { path: '/maisons', file: 'maisons.js' },
+    { path: '/messages', file: 'messages.js' },
+    { path: '/admin', file: 'admin.js' },
   ];
 
-  routes.forEach(({ path, file }) => {
+  routes.forEach(({ path: routePath, file }) => {
     try {
-      const routeModule = require(file);
-      app.use(path, routeModule);
-      console.log(`✅ Route ${path} chargée`);
+      const routeFilePath = path.join(routesDir, file);
+      console.log(`📁 Chargement ${routePath} depuis:`, routeFilePath);
+      const routeModule = require(routeFilePath);
+      app.use(routePath, routeModule);
+      console.log(`✅ Route ${routePath} chargée`);
       
       // Log supplémentaire pour les routes admin
-      if (path === '/admin') {
-        console.log(`✅ Routes admin montées sur ${path}`);
+      if (routePath === '/admin') {
+        console.log(`✅ Routes admin montées sur ${routePath}`);
         // Vérifier que le router a bien des routes
         if (routeModule && routeModule.stack) {
           console.log(`✅ Routes admin disponibles:`, routeModule.stack.map(layer => layer.route?.path || layer.regexp.toString()).slice(0, 5));
         }
       }
     } catch (error) {
-      console.error(`❌ Erreur route ${path}:`, error.message);
-      console.error(`❌ Stack pour ${path}:`, error.stack);
+      console.error(`❌ Erreur route ${routePath}:`, error.message);
+      console.error(`❌ Stack pour ${routePath}:`, error.stack);
+      console.error(`❌ Fichier tenté:`, path.join(routesDir, file));
       // Ne pas bloquer l'app si une route échoue
     }
   });
