@@ -41,8 +41,8 @@ const initMongoDB = () => {
   try {
     mongoose = require('mongoose');
     mongoose.set('strictQuery', false);
-    mongoose.set('bufferCommands', false);
-    mongoose.set('bufferMaxEntries', 0);
+    // Note: bufferCommands et bufferMaxEntries ne sont plus supportés dans les nouvelles versions
+    // Mongoose gère automatiquement le buffering
     return mongoose;
   } catch (error) {
     console.error('❌ Erreur chargement mongoose:', error.message);
@@ -326,16 +326,37 @@ app.use((err, req, res, next) => {
 // 404 avec plus de détails pour debug
 app.use((req, res) => {
   console.log(`⚠️ Route non trouvée: ${req.method} ${req.path}`);
-  console.log(`⚠️ Routes disponibles:`, app._router?.stack?.map(layer => {
-    if (layer.route) {
-      return `${Object.keys(layer.route.methods).join(',').toUpperCase()} ${layer.route.path}`;
-    }
-    return null;
-  }).filter(Boolean).slice(0, 10) || 'Aucune route trouvée');
+  
+  // Lister les routes montées de manière plus fiable
+  const routes = [];
+  if (app._router && app._router.stack) {
+    app._router.stack.forEach((middleware) => {
+      if (middleware.route) {
+        // Route directe
+        const methods = Object.keys(middleware.route.methods).map(m => m.toUpperCase()).join(',');
+        routes.push(`${methods} ${middleware.route.path}`);
+      } else if (middleware.name === 'router') {
+        // Router monté (comme /admin, /auth, etc.)
+        const basePath = middleware.regexp.source.replace('\\/?', '').replace('(?=\\/|$)', '').replace(/\\\//g, '/');
+        if (middleware.handle && middleware.handle.stack) {
+          middleware.handle.stack.forEach((layer) => {
+            if (layer.route) {
+              const methods = Object.keys(layer.route.methods).map(m => m.toUpperCase()).join(',');
+              routes.push(`${methods} ${basePath}${layer.route.path}`);
+            }
+          });
+        }
+      }
+    });
+  }
+  
+  console.log(`⚠️ Routes disponibles (${routes.length}):`, routes.slice(0, 15));
+  
   res.status(404).json({ 
     message: 'Route non trouvée',
     path: req.path,
-    method: req.method
+    method: req.method,
+    availableRoutes: routes.slice(0, 10) // Envoyer quelques routes pour debug
   });
 });
 
