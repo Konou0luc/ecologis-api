@@ -29,39 +29,10 @@ app.use((req, res, next) => {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Route principale - TOUJOURS FONCTIONNELLE (même sans MongoDB)
-app.get('/', (req, res) => {
-  try {
-    const mongoose = require('mongoose');
-    res.json({
-      message: '✅ API Ecopower - Gestion de consommation électrique',
-      status: 'online',
-      timestamp: new Date().toISOString(),
-      version: '1.0.0',
-      platform: 'Vercel Serverless',
-      database: {
-        status: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
-      }
-    });
-  } catch (error) {
-    res.json({
-      message: '✅ API Ecopower - Gestion de consommation électrique',
-      status: 'online',
-      timestamp: new Date().toISOString(),
-      version: '1.0.0',
-      platform: 'Vercel Serverless'
-    });
-  }
-});
-
-// Route config
-app.get('/config', (req, res) => {
-  res.json({ freeMode: process.env.FREE_MODE === 'true' });
-});
-
 // Configuration MongoDB (lazy loading)
 let mongoose = null;
 let mongoConnected = false;
+let mongoConnectionAttempts = 0;
 
 const initMongoDB = () => {
   if (mongoose) return mongoose;
@@ -80,6 +51,7 @@ const initMongoDB = () => {
 
 const connectDB = async () => {
   try {
+    // Initialiser mongoose si nécessaire
     if (!mongoose) {
       initMongoDB();
       if (!mongoose) {
@@ -87,25 +59,40 @@ const connectDB = async () => {
       }
     }
 
+    // Vérifier MONGO_URI
     if (!process.env.MONGO_URI) {
-      throw new Error('MONGO_URI not set');
+      const errorMsg = 'MONGO_URI non défini dans les variables d\'environnement Vercel';
+      console.error('❌', errorMsg);
+      console.error('❌ Variables disponibles:', Object.keys(process.env).filter(k => k.includes('MONGO') || k.includes('DB')));
+      throw new Error(errorMsg);
     }
+
+    // Logger l'URI (sans afficher le mot de passe)
+    const mongoUriDisplay = process.env.MONGO_URI.replace(/:[^:@]+@/, ':****@');
+    console.log('🔄 Tentative de connexion MongoDB...', mongoUriDisplay.substring(0, 50) + '...');
 
     // Si déjà connecté, réutiliser
     if (mongoose.connection.readyState === 1) {
       mongoConnected = true;
+      console.log('✅ MongoDB déjà connecté');
       return mongoose.connection;
     }
 
-    // Si connexion en cours, attendre (avec timeout court)
+    // Si connexion en cours, attendre (avec timeout plus long)
     if (mongoose.connection.readyState === 2) {
+      console.log('⏳ Connexion MongoDB en cours, attente...');
       await new Promise((resolve, reject) => {
-        const timeout = setTimeout(() => reject(new Error('Timeout attente connexion')), 5000);
+        const timeout = setTimeout(() => {
+          reject(new Error('Timeout: connexion en cours depuis plus de 15 secondes'));
+        }, 15000);
+        
         mongoose.connection.once('connected', () => {
           clearTimeout(timeout);
           mongoConnected = true;
+          console.log('✅ MongoDB connecté (après attente)');
           resolve();
         });
+        
         mongoose.connection.once('error', (err) => {
           clearTimeout(timeout);
           reject(err);
@@ -114,21 +101,25 @@ const connectDB = async () => {
       return mongoose.connection;
     }
 
-    // Nouvelle connexion
+    // Nouvelle connexion avec timeouts augmentés
+    mongoConnectionAttempts++;
+    console.log(`🔄 Tentative de connexion #${mongoConnectionAttempts}...`);
+    
     await mongoose.connect(process.env.MONGO_URI, {
       maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 30000,
-      connectTimeoutMS: 5000,
+      serverSelectionTimeoutMS: 15000, // Augmenté à 15s
+      socketTimeoutMS: 45000,
+      connectTimeoutMS: 15000, // Augmenté à 15s
       bufferMaxEntries: 0,
       bufferCommands: false,
     });
     
     mongoConnected = true;
-    console.log('✅ MongoDB connecté');
+    console.log('✅ MongoDB connecté avec succès');
     
+    // Écouteurs d'événements
     mongoose.connection.on('error', (err) => {
-      console.error('❌ Erreur MongoDB:', err.message);
+      console.error('❌ Erreur MongoDB après connexion:', err.message);
       mongoConnected = false;
     });
 
@@ -137,10 +128,21 @@ const connectDB = async () => {
       mongoConnected = false;
     });
 
+    mongoose.connection.on('reconnected', () => {
+      console.log('✅ MongoDB reconnecté');
+      mongoConnected = true;
+    });
+
     return mongoose.connection;
   } catch (error) {
-    console.error('💥 Erreur connexion MongoDB:', error.message);
     mongoConnected = false;
+    console.error('💥 Erreur connexion MongoDB:', error.message);
+    console.error('💥 Stack:', error.stack);
+    console.error('💥 MONGO_URI défini:', !!process.env.MONGO_URI);
+    if (process.env.MONGO_URI) {
+      const uriPreview = process.env.MONGO_URI.substring(0, 30) + '...';
+      console.error('💥 MONGO_URI preview:', uriPreview);
+    }
     throw error;
   }
 };
@@ -154,18 +156,61 @@ app.use(async (req, res, next) => {
   
   try {
     // S'assurer que MongoDB est connecté
-    if (!mongoConnected || (mongoose && mongoose.connection.readyState !== 1)) {
+    const currentState = mongoose ? mongoose.connection.readyState : 0;
+    if (!mongoConnected || currentState !== 1) {
+      console.log(`🔄 [${req.method} ${req.path}] Connexion MongoDB nécessaire (état: ${currentState})`);
       await connectDB();
     }
     next();
   } catch (error) {
-    console.error('💥 [MIDDLEWARE] Erreur MongoDB:', error.message);
-    // Ne pas bloquer la requête, mais retourner une erreur
+    console.error(`💥 [MIDDLEWARE] Erreur MongoDB pour ${req.method} ${req.path}:`, error.message);
     return res.status(503).json({ 
       message: 'Base de données non accessible',
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Service temporairement indisponible'
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Service temporairement indisponible',
+      details: process.env.NODE_ENV === 'development' ? {
+        mongoUriDefined: !!process.env.MONGO_URI,
+        connectionState: mongoose ? mongoose.connection.readyState : 'mongoose not initialized',
+        attempts: mongoConnectionAttempts
+      } : undefined
     });
   }
+});
+
+// Route principale - TOUJOURS FONCTIONNELLE (même sans MongoDB)
+app.get('/', (req, res) => {
+  try {
+    if (!mongoose) initMongoDB();
+    const dbStatus = mongoose && mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+    res.json({
+      message: '✅ API Ecopower - Gestion de consommation électrique',
+      status: 'online',
+      timestamp: new Date().toISOString(),
+      version: '1.0.0',
+      platform: 'Vercel Serverless',
+      database: {
+        status: dbStatus,
+        mongoUriDefined: !!process.env.MONGO_URI,
+        connectionState: mongoose ? mongoose.connection.readyState : 'not initialized'
+      }
+    });
+  } catch (error) {
+    res.json({
+      message: '✅ API Ecopower - Gestion de consommation électrique',
+      status: 'online',
+      timestamp: new Date().toISOString(),
+      version: '1.0.0',
+      platform: 'Vercel Serverless',
+      database: {
+        status: 'error',
+        error: error.message
+      }
+    });
+  }
+});
+
+// Route config
+app.get('/config', (req, res) => {
+  res.json({ freeMode: process.env.FREE_MODE === 'true' });
 });
 
 // Charger les routes avec gestion d'erreur robuste
@@ -177,6 +222,7 @@ const loadRoutes = () => {
     console.log('✅ Route /auth chargée');
   } catch (error) {
     console.error('❌ Erreur route /auth:', error.message);
+    console.error('❌ Stack:', error.stack);
     // Fallback pour /auth/login
     app.post('/auth/login', (req, res) => {
       res.status(500).json({ 
