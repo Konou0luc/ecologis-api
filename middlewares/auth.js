@@ -4,13 +4,25 @@ const User = require('../models/User');
 // Middleware pour vérifier le token JWT
 const authenticateToken = async (req, res, next) => {
   try {
-    const authHeader = req.headers['authorization'];
+    // Log pour déboguer les headers reçus
+    console.log('🔍 [AUTH] Headers reçus:', {
+      'authorization': req.headers['authorization'] ? 'Présent' : 'Absent',
+      'Authorization': req.headers['Authorization'] ? 'Présent' : 'Absent',
+      'path': req.path,
+      'method': req.method
+    });
+    
+    // Essayer les deux cas (Express normalise normalement en minuscules)
+    const authHeader = req.headers['authorization'] || req.headers['Authorization'];
     const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
     if (!token) {
       console.error('❌ [AUTH] authenticateToken: Aucun token fourni pour', req.method, req.path);
+      console.error('❌ [AUTH] Headers disponibles:', Object.keys(req.headers).filter(h => h.toLowerCase().includes('auth')));
       return res.status(401).json({ message: 'Token d\'accès requis' });
     }
+    
+    console.log('🔍 [AUTH] Token extrait (preview):', token.substring(0, 20) + '...');
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     console.log('🔐 [AUTH] Token décodé avec succès. userId:', decoded.userId);
