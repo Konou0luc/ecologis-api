@@ -71,13 +71,13 @@ consommationSchema.virtual('periode').get(function () {
 // Inclure les virtuals dans JSON
 consommationSchema.set('toJSON', { virtuals: true });
 
-// Index composé pour éviter les doublons
+// Index pour optimiser les requêtes (sans contrainte unique pour permettre plusieurs relevés par mois)
 consommationSchema.index({
   residentId: 1,
   maisonId: 1,
   mois: 1,
   annee: 1
-}, { unique: true });
+});
 
 // Index pour optimiser les requêtes
 consommationSchema.index({ residentId: 1, annee: 1, mois: 1 });

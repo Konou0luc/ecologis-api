@@ -48,17 +48,17 @@ const addConsommation = async (req, res) => {
         return res.status(404).json({ message: "Maison non trouvée" });
     }
 
-    // Vérifier doublon pour la période
-    const existingConsommation = await Consommation.findOne({
+    // Vérifier la limite de 2 relevés par mois
+    const countReleves = await Consommation.countDocuments({
       residentId,
       maisonId,
       mois,
       annee,
     });
-    if (existingConsommation) {
+    if (countReleves >= 2) {
       return res.status(400).json({
-        message: "Une consommation existe déjà pour cette période",
-        existingConsommation,
+        message: "Limite atteinte : maximum 2 relevés par mois pour ce résident",
+        count: countReleves,
       });
     }
 
@@ -77,7 +77,7 @@ const addConsommation = async (req, res) => {
     }
     const montant = kwh * maison.tarifKwh;
 
-    // Créer la consommation
+    // Créer la consommation avec dateReleve
     const consommation = new Consommation({
       residentId,
       maisonId,
@@ -88,6 +88,7 @@ const addConsommation = async (req, res) => {
       commentaire,
       kwh,
       montant,
+      dateReleve: new Date(), // Date du relevé (permet de différencier les relevés du même mois)
     });
 
     await consommation.save();
@@ -97,7 +98,7 @@ const addConsommation = async (req, res) => {
       residentId,
       _id: { $ne: consommation._id },
     })
-      .sort({ annee: -1, mois: -1, createdAt: -1 })
+      .sort({ annee: -1, mois: -1, dateReleve: -1, createdAt: -1 })
       .limit(3);
 
     if (troisDernieres.length > 0) {
@@ -152,7 +153,7 @@ const getConsommationsByResident = async (req, res) => {
 
     const consommations = await Consommation.find(query)
       .populate("maisonId", "nomMaison")
-      .sort({ annee: -1, mois: -1 });
+      .sort({ annee: -1, mois: -1, dateReleve: -1 });
 
     // Stats
     const totalKwh = consommations.reduce((s, c) => s + c.kwh, 0);
@@ -205,7 +206,7 @@ const getConsommationsByMaison = async (req, res) => {
 
     const consommations = await Consommation.find(query)
       .populate("residentId", "nom prenom email")
-      .sort({ annee: -1, mois: -1, "residentId.nom": 1 });
+      .sort({ annee: -1, mois: -1, dateReleve: -1, "residentId.nom": 1 });
 
     // Stats par résident
     const statsParResident = {};
@@ -334,7 +335,7 @@ const getMyConsommations = async (req, res) => {
 
     const consommations = await Consommation.find(query)
       .populate("maisonId", "nomMaison adresse")
-      .sort({ annee: -1, mois: -1 });
+      .sort({ annee: -1, mois: -1, dateReleve: -1 });
 
     // Calculer les statistiques
     const totalKwh = consommations.reduce((s, c) => s + c.kwh, 0);
@@ -385,7 +386,7 @@ const getMyMaisonConsommations = async (req, res) => {
 
     const consommations = await Consommation.find(query)
       .populate("residentId", "nom prenom email")
-      .sort({ annee: -1, mois: -1, "residentId.nom": 1 });
+      .sort({ annee: -1, mois: -1, dateReleve: -1, "residentId.nom": 1 });
 
     // Calculer les statistiques par résident
     const statsParResident = {};
